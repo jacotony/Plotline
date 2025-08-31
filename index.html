@@ -755,5 +755,25 @@ document.addEventListener('DOMContentLoaded', async function(){
 
 function openSection(id){ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); if(id==='feed') document.getElementById('feed-btn').classList.add('active'); if(id==='add') document.getElementById('add-btn').classList.add('active'); if(id==='my-books') document.getElementById('my-books-btn').classList.add('active'); if(id==='prefs') document.getElementById('prefs-btn').classList.add('active'); }
 </script>
+  <script>
+// Bypass any login gating and boot the app immediately
+document.addEventListener('DOMContentLoaded', async function () {
+  // Show the app, hide/remove any leftover login UI
+  var app = document.getElementById('main-app'); if (app) app.style.display = '';
+  var login = document.getElementById('login-section'); if (login) login.remove();
+  var bar = document.getElementById('user-bar'); if (bar) bar.remove();
+
+  // Run the normal PlotLine init
+  try { await loadAll?.(); } catch(e){ console.warn('loadAll failed (ok to continue):', e); }
+  try {
+    populateCategoryOptions?.();
+    populateTagFilter?.();
+    applyFilters?.();
+    renderMyLists?.();
+    updateStats?.();
+    updateCloudInputsUI?.();
+  } catch(e){ console.error('Init error:', e); }
+});
+</script>
 </body>
 </html>
