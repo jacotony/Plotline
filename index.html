@@ -93,7 +93,7 @@
   #finish-modal{position:fixed;left:50%;top:20%;transform:translate(-50%,0);background:#2f2f2f;color:#fff;border-radius:10px;padding:14px;box-shadow:0 10px 24px rgba(0,0,0,.25);z-index:10000;display:none;max-width:520px}
   #finish-modal.show{display:block}
 
-  /* === Book Club-style Login UI === */
+  /* === Login UI === */
   .login{padding:40px 12px;text-align:center}
   .login-card{background:#fff;padding:28px;border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.12);max-width:420px;margin:0 auto;border:1px solid var(--line)}
   .small{font-size:12px;color:#2b3832}
@@ -115,13 +115,26 @@
       <p>Your private reading feed</p>
     </div>
 
-    <!-- OPTIONAL: simple user bar like Book Club -->
+    <!-- User bar -->
+    <div class="user-bar" id="user-bar">
+      <div>Welcome, <strong id="user-name">—</strong></div>
+      <button class="pill-btn" id="logout-btn" type="button">Log out</button>
+    </div>
 
+    <!-- Login section (name-only gate) -->
+    <section id="login-section" class="login">
+      <div class="login-card">
+        <h2 style="margin-bottom:8px">Welcome to PlotLine</h2>
+        <p class="small" style="margin-bottom:12px">Enter your name to continue</p>
+        <form id="login-form" style="display:flex;gap:8px;justify-content:center">
+          <input id="username-input" class="input" placeholder="Your name" autocomplete="name" required style="max-width:220px"/>
+          <button class="action" type="submit">Enter</button>
+        </form>
+      </div>
+    </section>
 
-    <!-- Login section (EXACT FLOW from Book Club: name-only gate, no auto-login) -->
- 
     <!-- Everything below is hidden until login -->
-    <section id="main-app">
+    <section id="main-app" style="display:none">
       <!-- Stats row -->
       <div class="stats" id="stats">
         <div class="stat"><strong id="total-books">0</strong> books</div>
@@ -251,9 +264,9 @@
             <h3>Cloud Sync (JSONBin)</h3>
             <p class="chip" id="sync-status">Idle</p>
             <div class="search" style="grid-template-columns:2fr 2fr auto auto">
-              <input id="cloud-api" class="input" placeholder="Using Book Club creds" disabled/>
-              <input id="cloud-bin" class="input" placeholder="Using Book Club creds" disabled/>
-              <button id="cloud-save" class="action" type="button" disabled>Save</button>
+              <input id="cloud-api" class="input" placeholder="Paste your JSONBin API key"/>
+              <input id="cloud-bin" class="input" placeholder="Paste your Bin ID"/>
+              <button id="cloud-save" class="action" type="button">Save</button>
               <button id="cloud-create" class="action" type="button">Create New Bin</button>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -288,23 +301,50 @@
 /* ===== Helpers ===== */
 function rAll(str, search, replacement){ return String(str).split(search).join(replacement); }
 function escapeHtml(s){ s=String(s==null?'':s); s=rAll(s,'&','&amp;'); s=rAll(s,'<','&lt;'); s=rAll(s,'>','&gt;'); return s; }
-function escapeAttr(s){ return rAll(escapeHtml(s),'\"','&quot;'); }
+function escapeAttr(s){ return rAll(escapeHtml(s),'"','&quot;'); }
 function nowISO(){ return new Date().toISOString(); }
 function formatDate(v){ var n=Number(v); var d=new Date(isFinite(n)?n:v); try{ return d.toLocaleDateString(); }catch(_e){ return d.toISOString().slice(0,10);} }
-function showToast(msg,isError){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.toggle('error',!!isError); t.classList.add('show'); clearTimeout(showToast._t); showToast._t=setTimeout(function(){ t.classList.remove('show'); }, isError?3200:1800); }
+function showToast(msg,isError){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.toggle('error',!!isError); t.classList.add('show'); clearTimeout(showToast._t); showToast._t=setTimeout(function(){ t.classList.remove('show'); }, isError?4200:2000); }
 function truncate(s,n){ s=String(s||''); n=n||300; return s.length>n? s.slice(0,n-1)+'…' : s; }
 
-/* ===== Storage / Cloud (Book Club–style JSONBin usage kept for PlotLine) ===== */
-const JSONBIN_API = 'https://api.jsonbin.io/v3';
-// Using your PlotLine bin; namespaced under record.plotline so it won't clash
-const BIN_ID = '68b3cb8dd0ea881f406ca19e';
-const API_KEY = '$2a$10$iBSfMhVt0mOYgC1uNUPBkuxj6plaS6MOuzL4JPvYzPWsVhJSroRTa';
+/* ===== Login gate ===== */
+let currentUser = null;
+function gateToLogin(){
+  currentUser=null;
+  document.getElementById('user-bar').style.display='none';
+  document.getElementById('login-section').style.display='block';
+  document.getElementById('main-app').style.display='none';
+}
+function gateToApp(name){
+  currentUser = { name: String(name||'').trim() };
+  document.getElementById('user-name').textContent = currentUser.name;
+  document.getElementById('user-bar').style.display='flex';
+  document.getElementById('login-section').style.display='none';
+  document.getElementById('main-app').style.display='block';
+}
+
+/* ===== Storage / Cloud (JSONBin v3) ===== */
+const DEFAULT_JSONBIN_API = 'https://api.jsonbin.io/v3';
+const DEFAULT_BIN_ID = '68b3cb8dd0ea881f406ca19e'; // fallback
+const DEFAULT_API_KEY = '$2a$10$iBSfMhVt0mOYgC1uNUPBkuxj6plaS6MOuzL4JPvYzPWsVhJSroRTa'; // fallback
+
+function getApiKey(){ return (localStorage.getItem('plotline_api_key') || DEFAULT_API_KEY).trim(); }
+function getBinId(){ return (localStorage.getItem('plotline_bin_id') || DEFAULT_BIN_ID).trim(); }
+function getApiBase(){ return (localStorage.getItem('plotline_api_base') || DEFAULT_JSONBIN_API).trim(); }
 
 let books = [];
 let sitePrefs = { goals: { year: new Date().getFullYear(), total: 0, byTag: { catholic:0, fiction:0, nonfiction:0 } } };
 
-// Unified headers: accept Master OR Access key, avoid returning metadata
-function jbHeaders(){ return { 'Content-Type':'application/json', 'X-Master-Key': API_KEY, 'X-Access-Key': API_KEY, 'X-Bin-Meta': 'false', 'Accept':'application/json' }; }
+// Unified headers; JSONBin accepts X-Master-Key (Access-Key optional if you use collection)
+function jbHeaders(){
+  const key = getApiKey();
+  return {
+    'Content-Type':'application/json',
+    'X-Master-Key': key,
+    'X-Bin-Meta': 'false',
+    'Accept':'application/json'
+  };
+}
 // Namespace helper: prefer record.plotline if present
 function ns(record){ return (record && record.plotline) ? record.plotline : record; }
 
@@ -318,8 +358,11 @@ async function loadAll(){
 
   // 2) remote pull
   try{
-    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`,{headers: jbHeaders()});
-    if(!r.ok) throw new Error(await r.text());
+    const r = await fetch(`${getApiBase()}/b/${getBinId()}/latest`,{headers: jbHeaders()});
+    if(!r.ok){
+      const txt = await r.text();
+      throw new Error(`Pull ${r.status}: ${txt.slice(0,140)}`);
+    }
     const data=await r.json();
     const record=data.record||{};
     const scoped = ns(record);
@@ -327,7 +370,11 @@ async function loadAll(){
     sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs);
     try{ localStorage.setItem('plotline_payload', JSON.stringify({books,sitePrefs})); }catch(_e){}
     var s=document.getElementById('sync-status'); if(s) s.textContent='Pulled';
-  }catch(e){ console.warn('Using local data; sync failed.', e); var s2=document.getElementById('sync-status'); if(s2) s2.textContent='Pull failed'; }
+  }catch(e){
+    console.warn('Using local data; sync failed.', e);
+    var s2=document.getElementById('sync-status'); if(s2) s2.textContent='Pull failed';
+    showToast(e.message||'Cloud pull failed', true);
+  }
 }
 async function saveAll(){
   // local cache
@@ -335,20 +382,32 @@ async function saveAll(){
 
   // remote push (merge into namespaced record)
   try{
-    const latest = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, { headers: jbHeaders() });
+    const latest = await fetch(`${getApiBase()}/b/${getBinId()}/latest`, { headers: jbHeaders() });
     let record = latest.ok ? ((await latest.json()).record || {}) : {};
     record.plotline = { books, sitePrefs };
-    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}`,{ method:'PUT', headers: jbHeaders(), body: JSON.stringify(record) });
-    if(!r.ok) throw new Error(await r.text());
+    const r = await fetch(`${getApiBase()}/b/${getBinId()}`,{
+      method:'PUT', headers: jbHeaders(), body: JSON.stringify(record)
+    });
+    if(!r.ok){
+      const txt = await r.text();
+      throw new Error(`Push ${r.status}: ${txt.slice(0,140)}`);
+    }
     var s=document.getElementById('sync-status'); if(s) s.textContent='Pushed';
-  }catch(e){ console.warn('Remote save failed',e); var s2=document.getElementById('sync-status'); if(s2) s2.textContent='Push failed'; }
+  }catch(e){
+    console.warn('Remote save failed',e);
+    var s2=document.getElementById('sync-status'); if(s2) s2.textContent='Push failed';
+    showToast(e.message||'Cloud push failed', true);
+  }
 }
 
 async function cloudPull(){
   try{
     document.getElementById('sync-status').textContent = 'Pulling…';
-    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`,{headers: jbHeaders()});
-    if(!r.ok) throw new Error(await r.text());
+    const r = await fetch(`${getApiBase()}/b/${getBinId()}/latest`,{headers: jbHeaders()});
+    if(!r.ok){
+      const txt = await r.text();
+      throw new Error(`Pull ${r.status}: ${txt.slice(0,140)}`);
+    }
     const data=await r.json();
     const record=data.record||{};
     const scoped = ns(record);
@@ -358,37 +417,63 @@ async function cloudPull(){
     applyFilters(); renderMyLists(); updateStats();
     document.getElementById('sync-status').textContent = 'Pulled';
     showToast('Cloud pulled');
-  }catch(e){ console.warn(e); document.getElementById('sync-status').textContent='Pull failed'; showToast('Pull failed',true); }
+  }catch(e){
+    console.warn(e);
+    document.getElementById('sync-status').textContent='Pull failed';
+    showToast(e.message||'Pull failed',true);
+  }
 }
 async function cloudPush(){
   try{
     document.getElementById('sync-status').textContent = 'Pushing…';
-    const latest = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, { headers: jbHeaders() });
+    const latest = await fetch(`${getApiBase()}/b/${getBinId()}/latest`, { headers: jbHeaders() });
     let record = latest.ok ? ((await latest.json()).record || {}) : {};
     record.plotline = { books, sitePrefs };
-    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}`,{ method:'PUT', headers: jbHeaders(), body: JSON.stringify(record) });
-    if(!r.ok) throw new Error(await r.text());
+    const r = await fetch(`${getApiBase()}/b/${getBinId()}`,{
+      method:'PUT', headers: jbHeaders(), body: JSON.stringify(record)
+    });
+    if(!r.ok){
+      const txt = await r.text();
+      throw new Error(`Push ${r.status}: ${txt.slice(0,140)}`);
+    }
     document.getElementById('sync-status').textContent='Pushed';
     showToast('Cloud pushed');
-  }catch(e){ console.warn(e); document.getElementById('sync-status').textContent='Push failed'; showToast('Push failed',true); }
+  }catch(e){
+    console.warn(e);
+    document.getElementById('sync-status').textContent='Push failed';
+    showToast(e.message||'Push failed',true);
+  }
 }
 async function cloudCreate(){
   try{
     document.getElementById('sync-status').textContent = 'Creating…';
     const initial = { plotline: { books, sitePrefs } };
-    const r=await fetch(`${JSONBIN_API}/b`,{method:'POST',headers: jbHeaders(),body:JSON.stringify(initial)});
-    if(!r.ok) throw new Error(await r.text());
+    const r=await fetch(`${getApiBase()}/b`,{method:'POST',headers: jbHeaders(),body:JSON.stringify(initial)});
+    if(!r.ok){
+      const txt = await r.text();
+      throw new Error(`Create ${r.status}: ${txt.slice(0,140)}`);
+    }
     const data=await r.json();
     const newId=(data.metadata && data.metadata.id)||data.id;
-    if(!newId) throw new Error('No Bin ID');
-    showToast('New JSONBin created: '+newId);
+    if(!newId) throw new Error('No Bin ID returned');
+    // Store override so subsequent pulls/pushes use it
+    localStorage.setItem('plotline_bin_id', newId);
+    document.getElementById('cloud-bin').value = newId;
+    showToast('New JSONBin created & saved: '+newId);
     document.getElementById('sync-status').textContent='New bin created';
-  }catch(e){ console.warn(e); document.getElementById('sync-status').textContent='Create failed'; showToast('Create failed',true); }
+  }catch(e){
+    console.warn(e);
+    document.getElementById('sync-status').textContent='Create failed';
+    showToast(e.message||'Create failed',true);
+  }
 }
 function updateCloudInputsUI(){
-  const api=document.getElementById('cloud-api'); const bin=document.getElementById('cloud-bin');
-  if(api){ api.value=''; api.placeholder='Using hard-coded key'; api.disabled=true; }
-  if(bin){ bin.value=''; bin.placeholder='Using hard-coded bin'; bin.disabled=true; }
+  const api=document.getElementById('cloud-api');
+  const bin=document.getElementById('cloud-bin');
+  const savedKey = localStorage.getItem('plotline_api_key') || '';
+  const savedBin = localStorage.getItem('plotline_bin_id') || '';
+  if(api){ api.value = savedKey; api.placeholder = savedKey ? '(saved)' : 'Paste your JSONBin API key'; }
+  if(bin){ bin.value = savedBin; bin.placeholder = savedBin ? '(saved)' : 'Paste your Bin ID'; }
 }
 
 /* ===== Data Model Helpers ===== */
@@ -455,7 +540,13 @@ function tagChips(tags){
   if(!tags || !tags.length) return '';
   return '<div class="tags">' + tags.map(function(t){ return '<span class="tag">'+escapeHtml(t)+'</span>'; }).join('') + '</div>';
 }
-function bookCoverBlock(book){ var link=goodreadsUrl(book); if(book.image){ return '<a href="'+link+'" target="_blank" rel="noopener noreferrer"><img class="cover" loading="lazy" alt="Cover of '+escapeHtml(book.title)+'" src="'+escapeAttr(book.image)+'"/></a>'; } return '<a href="'+link+'" target="_blank" rel="noopener noreferrer" class="cover-ph">No Cover</a>'; }
+function bookCoverBlock(book){
+  var link=goodreadsUrl(book);
+  if(book.image){
+    return '<a href="'+link+'" target="_blank" rel="noopener noreferrer"><img class="cover" loading="lazy" alt="Cover of '+escapeHtml(book.title)+'" src="'+escapeAttr(book.image)+'"/></a>';
+  }
+  return '<a href="'+link+'" target="_blank" rel="noopener noreferrer" class="cover-ph">No Cover</a>';
+}
 
 function bookCard(book){
   const width=starWidthFromRating(book.rating||0);
@@ -488,7 +579,10 @@ function bookCard(book){
 let currentBooks=[];
 function renderBooks(){
   const c=document.getElementById('books-feed');
-  if(!currentBooks.length){ c.innerHTML='<div style="text-align:center;padding:28px;color:#6a5d50"><h3 style="font-size:1rem">No books found</h3><p class="chip">Add a book or adjust filters.</p></div>'; document.getElementById('result-count').textContent='0 results'; return; }
+  if(!currentBooks.length){
+    c.innerHTML='<div style="text-align:center;padding:28px;color:#6a5d50"><h3 style="font-size:1rem">No books found</h3><p class="chip">Add a book or adjust filters.</p></div>';
+    document.getElementById('result-count').textContent='0 results'; return;
+  }
   c.innerHTML=currentBooks.map(bookCard).join('');
   document.getElementById('result-count').textContent=String(currentBooks.length)+' result'+(currentBooks.length===1?'':'s');
 }
@@ -510,7 +604,13 @@ function monthYearCounts(){
   let month=0, year=0; let sum=0, n=0;
   books.forEach(b=>{
     (b.sessions||[]).forEach(s=>{
-      if(s.finishedAt){ const d=new Date(s.finishedAt); if(d.getFullYear()===y){ year++; if(d.getMonth()===m) month++; if(typeof s.rating==='number'){ sum+=s.rating; n++; } }
+      if(s.finishedAt){
+        const d=new Date(s.finishedAt);
+        if(d.getFullYear()===y){
+          year++;
+          if(d.getMonth()===m) month++;
+          if(typeof s.rating==='number'){ sum+=s.rating; n++; }
+        }
       }
     });
   });
@@ -548,7 +648,21 @@ function populateTagFilter(){
   sel.innerHTML=['<option value="">All Tags</option>'].concat(all.map(t=>'<option value="'+escapeAttr(t)+'">'+escapeHtml(t)+'</option>')).join('');
   if(all.indexOf(cur)>-1) sel.value=cur;
 }
-function bookSearchScore(b,t){ if(!t) return 1; var term=String(t).toLowerCase(); function inStr(s){ return String(s||'').toLowerCase(); } var score=0; var title=inStr(b.title), author=inStr(b.author), syn=inStr(b.synopsis); var tags=(b.tags||[]).map(x=>String(x).toLowerCase()); if(title===term) score+=100; if(title.indexOf(term)===0) score+=60; if(title.indexOf(term)>-1) score+=30; if(author.indexOf(term)===0) score+=30; if(author.indexOf(term)>-1) score+=20; if(syn.indexOf(term)>-1) score+=12; if(tags.some(x=>x.indexOf(term)>-1)) score+=25; return score; }
+function bookSearchScore(b,t){
+  if(!t) return 1;
+  var term=String(t).toLowerCase();
+  function inStr(s){ return String(s||'').toLowerCase(); }
+  var score=0; var title=inStr(b.title), author=inStr(b.author), syn=inStr(b.synopsis);
+  var tags=(b.tags||[]).map(x=>String(x).toLowerCase());
+  if(title===term) score+=100;
+  if(title.indexOf(term)===0) score+=60;
+  if(title.indexOf(term)>-1) score+=30;
+  if(author.indexOf(term)===0) score+=30;
+  if(author.indexOf(term)>-1) score+=20;
+  if(syn.indexOf(term)>-1) score+=12;
+  if(tags.some(x=>x.indexOf(term)>-1)) score+=25;
+  return score;
+}
 function applyFilters(){
   var term=document.getElementById('search-input').value.trim();
   var tagTerm=document.getElementById('tag-filter').value.trim().toLowerCase();
@@ -578,11 +692,23 @@ const searchGoogleBooks=async function(q){
     const url='https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(q.trim())+'&maxResults=10';
     const r=await fetch(url); if(!r.ok) throw new Error('Search failed '+r.status);
     const data=await r.json(); input.classList.remove('loading');
-    lastSearchItems=(data.items||[]).map(function(it,i){ var v=it.volumeInfo||{}; return { index:i, title:v.title||'Unknown Title', authors:(v.authors||[]).join(', ')||'Unknown Author', cover:(v.imageLinks&&v.imageLinks.thumbnail)||'', description:v.description||'', categories:v.categories||[] }; });
+    lastSearchItems=(data.items||[]).map(function(it,i){
+      var v=it.volumeInfo||{};
+      return { index:i, title:v.title||'Unknown Title', authors:(v.authors||[]).join(', ')||'Unknown Author', cover:(v.imageLinks&&v.imageLinks.thumbnail)||'', description:v.description||'', categories:v.categories||[] };
+    });
     if(!lastSearchItems.length){ box.innerHTML='<div class="chip" style="padding:8px">No results</div>'; box.style.display='block'; return; }
-    box.innerHTML=lastSearchItems.map(function(r){ return '<div class="head" data-pick="'+r.index+'" style="justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0"><div style="display:flex;gap:8px;align-items:center">'+(r.cover?('<img src="'+escapeAttr(r.cover)+'" style="width:24px;height:36px;border-radius:4px;border:1px solid #e6ece8;object-fit:cover">'):'<div style="width:24px;height:36px;border-radius:4px;background:#e9ecef"></div>')+'<div><strong>'+escapeHtml(r.title)+'</strong><div class="chip" style="margin-top:2px">'+escapeHtml(r.authors)+'</div></div></div>'+( (r.categories&&r.categories.length)?('<span class="chip">'+escapeHtml(r.categories[0])+'</span>') : '' )+'</div>'; }).join('');
+    box.innerHTML=lastSearchItems.map(function(r){
+      return '<div class="head" data-pick="'+r.index+'" style="justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0"><div style="display:flex;gap:8px;align-items:center">'+
+      (r.cover?('<img src="'+escapeAttr(r.cover)+'" style="width:24px;height:36px;border-radius:4px;border:1px solid #e6ece8;object-fit:cover">'):'<div style="width:24px;height:36px;border-radius:4px;background:#e9ecef"></div>')+
+      '<div><strong>'+escapeHtml(r.title)+'</strong><div class="chip" style="margin-top:2px">'+escapeHtml(r.authors)+'</div></div></div>'+
+      ((r.categories&&r.categories.length)?('<span class="chip">'+escapeHtml(r.categories[0])+'</span>') : '')+
+      '</div>';
+    }).join('');
     box.style.display='block';
-  }catch(e){ input.classList.remove('loading'); console.warn(e); box.innerHTML='<div class="chip" style="padding:8px;color:#b74a4a">Search failed. Try again.</div>'; box.style.display='block'; }
+  }catch(e){
+    input.classList.remove('loading'); console.warn(e);
+    box.innerHTML='<div class="chip" style="padding:8px;color:#b74a4a">Search failed. Try again.</div>'; box.style.display='block';
+  }
 };
 
 /* ===== Export / Import ===== */
@@ -595,7 +721,19 @@ function exportCsvs(){
   download('plotline-export.json',JSON.stringify({books,sitePrefs},null,2),'application/json');
 }
 function exportJson(){ download('plotline-export.json',JSON.stringify({books,sitePrefs},null,2),'application/json'); }
-function importJson(file){ var fr=new FileReader(); fr.onload=function(){ try{ var data=JSON.parse(fr.result); if(data.books) books=data.books; if(data.sitePrefs) sitePrefs=data.sitePrefs; saveAll(); populateTagFilter(); applyFilters(); renderMyLists(); updateStats(); showToast('Import complete'); }catch(e){ showToast('Invalid JSON',true); } }; fr.readAsText(file); }
+function importJson(file){
+  var fr=new FileReader();
+  fr.onload=function(){
+    try{
+      var data=JSON.parse(fr.result);
+      if(data.books) books=data.books;
+      if(data.sitePrefs) sitePrefs=data.sitePrefs;
+      saveAll(); populateTagFilter(); applyFilters(); renderMyLists(); updateStats();
+      showToast('Import complete');
+    }catch(e){ showToast('Invalid JSON',true); }
+  };
+  fr.readAsText(file);
+}
 
 /* ===== Modal / Rating (half-star) ===== */
 let ratingDraft = 0; let finishContext=null;
@@ -604,22 +742,43 @@ function bindStarHit(elFg, elHit, feedbackEl){
   elHit.innerHTML = Array.from({length:10},(_,i)=>`<button type="button" data-i="${i}"></button>`).join('');
   elHit.addEventListener('click', function(e){ var btn=e.target.closest('button'); if(!btn) return; var i=Number(btn.getAttribute('data-i')); setFromIndex(i); });
 }
-function openFinishModal(book){ finishContext = {bookId: book.id}; document.getElementById('finish-title').textContent = book.title+' — '+book.author; var fg=document.getElementById('finish-fg'); var hit=document.getElementById('finish-hit'); bindStarHit(fg,hit,null); ratingDraft = book.rating||0; fg.style.width=starWidthFromRating(ratingDraft); document.getElementById('finish-modal').classList.add('show'); }
+function openFinishModal(book){
+  finishContext = {bookId: book.id};
+  document.getElementById('finish-title').textContent = book.title+' — '+book.author;
+  var fg=document.getElementById('finish-fg');
+  var hit=document.getElementById('finish-hit');
+  bindStarHit(fg,hit,null);
+  ratingDraft = book.rating||0;
+  fg.style.width=starWidthFromRating(ratingDraft);
+  document.getElementById('finish-modal').classList.add('show');
+}
 function closeFinishModal(){ document.getElementById('finish-modal').classList.remove('show'); finishContext=null; }
 
 /* ===== Boot / Events ===== */
-document.addEventListener('DOMContentLoaded', async function(){
-  // PWA manifest/light SW like before
-  (function setupPWA(){ try{ const manifest={name:'PlotLine',short_name:'PlotLine',start_url:'.',display:'standalone',background_color:'#ffffff',theme_color:'#2f4a3e',icons:[{src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAAAAABQFZ1hAAAAC0lEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAB4p1nNAAE=',sizes:'192x192',type:'image/png'}]}; const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}); const url=URL.createObjectURL(blob); const link=document.getElementById('app-manifest'); if(link) link.href=url; if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){ const sw="self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open('pl-v1').then(c=>c.addAll(['./'])))});self.addEventListener('activate',e=>self.clients.claim());self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})"; const swUrl=URL.createObjectURL(new Blob([sw],{type:'text/javascript'})); navigator.serviceWorker.register(swUrl).catch(function(){}); } }catch(_e){} })();
+document.addEventListener('DOMContentLoaded', function(){
+  // PWA manifest/light SW
+  (function setupPWA(){
+    try{
+      const manifest={name:'PlotLine',short_name:'PlotLine',start_url:'.',display:'standalone',background_color:'#ffffff',theme_color:'#2f4a3e',icons:[{src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAAAAABQFZ1hAAAAC0lEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAB4p1nNAAE=',sizes:'192x192',type:'image/png'}]};
+      const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'});
+      const url=URL.createObjectURL(blob);
+      const link=document.getElementById('app-manifest'); if(link) link.href=url;
+      if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+        const sw="self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open('pl-v1').then(c=>c.addAll(['./'])))});self.addEventListener('activate',e=>self.clients.claim());self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})";
+        const swUrl=URL.createObjectURL(new Blob([sw],{type:'text/javascript'}));
+        navigator.serviceWorker.register(swUrl).catch(function(){});
+      }
+    }catch(_e){}
+  })();
 
-  // --- Book Club–style login wiring (exact UX: name-only, no auto-login) ---
+  // Login wiring
   gateToLogin();
   document.getElementById('login-form').addEventListener('submit', function(e){
     e.preventDefault();
     const name=(document.getElementById('username-input').value||'').trim();
     if(!name){ showToast('Enter your name to continue',true); return; }
     gateToApp(name);
-    // after entering, we finish loading/rendering
+    // after entering, load & render
     loadAll().then(function(){
       populateCategoryOptions();
       populateTagFilter();
@@ -629,9 +788,7 @@ document.addEventListener('DOMContentLoaded', async function(){
       updateCloudInputsUI();
     });
   });
-  document.getElementById('logout-btn').addEventListener('click', function(){
-    gateToLogin();
-  });
+  document.getElementById('logout-btn').addEventListener('click', function(){ gateToLogin(); });
 
   // Nav
   document.getElementById('feed-btn').addEventListener('click', function(){ openSection('feed'); applyFilters(); });
@@ -648,8 +805,22 @@ document.addEventListener('DOMContentLoaded', async function(){
   document.getElementById('collapse-all').addEventListener('change', renderBooks);
 
   // Google Books
-  let debounceT=null; document.getElementById('book-search').addEventListener('input',function(e){ clearTimeout(debounceT); debounceT=setTimeout(function(){searchGoogleBooks(e.target.value);},300); });
-  document.addEventListener('click',function(e){ var pick=e.target.closest && e.target.closest('[data-pick]'); if(pick){ var i=Number(pick.getAttribute('data-pick')); var it=lastSearchItems[i]; if(!it) return; document.getElementById('title').value=it.title; document.getElementById('author').value=it.authors; document.getElementById('book-image').value=it.cover||''; document.getElementById('synopsis').value=it.description||''; var t=it.categories||[]; document.getElementById('tag-input').value = t.join(', '); document.getElementById('book-results').style.display='none'; }});
+  let debounceT=null;
+  document.getElementById('book-search').addEventListener('input',function(e){
+    clearTimeout(debounceT); debounceT=setTimeout(function(){searchGoogleBooks(e.target.value);},300);
+  });
+  document.addEventListener('click',function(e){
+    var pick=e.target.closest && e.target.closest('[data-pick]');
+    if(pick){
+      var i=Number(pick.getAttribute('data-pick')); var it=lastSearchItems[i]; if(!it) return;
+      document.getElementById('title').value=it.title;
+      document.getElementById('author').value=it.authors;
+      document.getElementById('book-image').value=it.cover||'';
+      document.getElementById('synopsis').value=it.description||'';
+      var t=it.categories||[]; document.getElementById('tag-input').value = t.join(', ');
+      document.getElementById('book-results').style.display='none';
+    }
+  });
   var bs=document.getElementById('book-search'); if(bs){ bs.addEventListener('keydown',function(e){ if((e.key||'')==='Enter'){ e.preventDefault(); }}); }
 
   // Add form rating widget
@@ -682,7 +853,10 @@ document.addEventListener('DOMContentLoaded', async function(){
 
     if(action==='toggle-synopsis'){
       var id=bookId; var wrap=document.querySelector('.syn[data-syn="'+id+'"]'); if(!wrap) return; var span=wrap.querySelector('.syn-text'); if(!span) return;
-      var expanded=span.getAttribute('data-expanded')==='true'; var full=(findBook(id).synopsis||''); if(expanded){ span.textContent=(full.length>280? full.slice(0,279)+'…' : full); span.setAttribute('data-expanded','false'); btn.textContent='Read more'; }else{ span.textContent=full; span.setAttribute('data-expanded','true'); btn.textContent='Show less'; } return;
+      var expanded=span.getAttribute('data-expanded')==='true'; var full=(findBook(id).synopsis||'');
+      if(expanded){ span.textContent=(full.length>280? full.slice(0,279)+'…' : full); span.setAttribute('data-expanded','false'); btn.textContent='Read more'; }
+      else{ span.textContent=full; span.setAttribute('data-expanded','true'); btn.textContent='Show less'; }
+      return;
     }
     if(action==='wish'){ var b=findBook(bookId); if(!b) return; setWish(b); saveAll(); applyFilters(); renderMyLists(); updateStats(); showToast('Moved to Want to Read'); return; }
     if(action==='reading'){ var b2=findBook(bookId); if(!b2) return; startReading(b2); saveAll(); applyFilters(); renderMyLists(); updateStats(); showToast('Marked as Currently Reading'); return; }
@@ -706,36 +880,55 @@ document.addEventListener('DOMContentLoaded', async function(){
   document.addEventListener('click',function(e){ var m=document.getElementById('finish-modal'); if(!m || !m.classList.contains('show')) return; if(!m.contains(e.target)) closeFinishModal(); });
 
   // Goals
-  function loadGoalsUI(){ var g=sitePrefs.goals||{year:new Date().getFullYear(), total:0, byTag:{}}; document.getElementById('goal-year').value=g.year||new Date().getFullYear(); document.getElementById('goal-total').value=g.total||0; document.getElementById('goal-catholic').value=(g.byTag&&g.byTag.catholic)||0; document.getElementById('goal-fiction').value=(g.byTag&&g.byTag.fiction)||0; document.getElementById('goal-nonfiction').value=(g.byTag&&g.byTag.nonfiction)||0; }
+  function loadGoalsUI(){
+    var g=sitePrefs.goals||{year:new Date().getFullYear(), total:0, byTag:{}};
+    document.getElementById('goal-year').value=g.year||new Date().getFullYear();
+    document.getElementById('goal-total').value=g.total||0;
+    document.getElementById('goal-catholic').value=(g.byTag&&g.byTag.catholic)||0;
+    document.getElementById('goal-fiction').value=(g.byTag&&g.byTag.fiction)||0;
+    document.getElementById('goal-nonfiction').value=(g.byTag&&g.byTag.nonfiction)||0;
+  }
   loadGoalsUI();
-  document.getElementById('save-goals').addEventListener('click', function(){ var g=sitePrefs.goals||{}; g.year=parseInt(document.getElementById('goal-year').value,10)||new Date().getFullYear(); g.total=parseInt(document.getElementById('goal-total').value,10)||0; g.byTag=g.byTag||{}; g.byTag.catholic=parseInt(document.getElementById('goal-catholic').value,10)||0; g.byTag.fiction=parseInt(document.getElementById('goal-fiction').value,10)||0; g.byTag.nonfiction=parseInt(document.getElementById('goal-nonfiction').value,10)||0; sitePrefs.goals=g; saveAll(); showToast('Goals saved'); });
+  document.getElementById('save-goals').addEventListener('click', function(){
+    var g=sitePrefs.goals||{};
+    g.year=parseInt(document.getElementById('goal-year').value,10)||new Date().getFullYear();
+    g.total=parseInt(document.getElementById('goal-total').value,10)||0;
+    g.byTag=g.byTag||{};
+    g.byTag.catholic=parseInt(document.getElementById('goal-catholic').value,10)||0;
+    g.byTag.fiction=parseInt(document.getElementById('goal-fiction').value,10)||0;
+    g.byTag.nonfiction=parseInt(document.getElementById('goal-nonfiction').value,10)||0;
+    sitePrefs.goals=g; saveAll(); showToast('Goals saved');
+  });
 
   // Export/Import
   document.getElementById('export-csv-btn').addEventListener('click', exportCsvs);
   document.getElementById('export-json-btn').addEventListener('click', exportJson);
   document.getElementById('import-json').addEventListener('change', function(e){ var f=e.target.files && e.target.files[0]; if(f) importJson(f); e.target.value=''; });
 
-  // Cloud controls (using hard-coded creds)
-  document.getElementById('cloud-save').addEventListener('click', function(){ showToast('Credentials are hard-coded here.', true); });
+  // Cloud controls
+  updateCloudInputsUI();
+  document.getElementById('cloud-save').addEventListener('click', function(){
+    const key = (document.getElementById('cloud-api').value||'').trim();
+    const bin = (document.getElementById('cloud-bin').value||'').trim();
+    if(key){ localStorage.setItem('plotline_api_key', key); }
+    if(bin){ localStorage.setItem('plotline_bin_id', bin); }
+    updateCloudInputsUI();
+    showToast('Cloud settings saved');
+  });
   document.getElementById('cloud-create').addEventListener('click', cloudCreate);
   document.getElementById('cloud-pull').addEventListener('click', cloudPull);
   document.getElementById('cloud-push').addEventListener('click', cloudPush);
 });
 
-function openSection(id){ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); if(id==='feed') document.getElementById('feed-btn').classList.add('active'); if(id==='add') document.getElementById('add-btn').classList.add('active'); if(id==='my-books') document.getElementById('my-books-btn').classList.add('active'); if(id==='prefs') document.getElementById('prefs-btn').classList.add('active'); }
-</script>
-</script>
-  document.addEventListener('DOMContentLoaded', async function () {
-  try { await loadAll?.(); } catch(e){ console.warn('loadAll failed (ok):', e); }
-  try {
-    populateCategoryOptions?.();
-    populateTagFilter?.();
-    applyFilters?.();
-    renderMyLists?.();
-    updateStats?.();
-    updateCloudInputsUI?.();
-  } catch(e){ console.error('Init error:', e); }
-});
+function openSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(id==='feed') document.getElementById('feed-btn').classList.add('active');
+  if(id==='add') document.getElementById('add-btn').classList.add('active');
+  if(id==='my-books') document.getElementById('my-books-btn').classList.add('active');
+  if(id==='prefs') document.getElementById('prefs-btn').classList.add('active');
+}
 </script>
 </body>
 </html>
