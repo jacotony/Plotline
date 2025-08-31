@@ -1,5 +1,4 @@
-
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -33,6 +32,10 @@
   .header{color:var(--ink);text-align:center;margin-bottom:14px}
   .header h1{font-size:1.8rem;margin-bottom:4px;font-family:Georgia,'Times New Roman',serif;font-weight:700}
   .header p{opacity:.9;font-size:.95rem}
+
+  .user-bar{display:none;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--line);padding:8px 12px;border-radius:10px;color:var(--ink);margin:10px 0;box-shadow:var(--shadow)}
+  .pill-btn{background:transparent;border:2px solid var(--accent);color:var(--accent);padding:6px 12px;border-radius:999px;cursor:pointer;font-size:12px;font-weight:800}
+  .pill-btn:hover{background:var(--accent);color:#fff}
 
   .stats{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
   .stat{background:#fff;padding:8px 10px;border-radius:10px;border:1px solid var(--line);box-shadow:var(--shadow);font-size:12px;display:flex;align-items:center;gap:8px}
@@ -90,6 +93,11 @@
   #finish-modal{position:fixed;left:50%;top:20%;transform:translate(-50%,0);background:#2f2f2f;color:#fff;border-radius:10px;padding:14px;box-shadow:0 10px 24px rgba(0,0,0,.25);z-index:10000;display:none;max-width:520px}
   #finish-modal.show{display:block}
 
+  /* === Book Club-style Login UI === */
+  .login{padding:40px 12px;text-align:center}
+  .login-card{background:#fff;padding:28px;border-radius:14px;box-shadow:0 10px 24px rgba(0,0,0,.12);max-width:420px;margin:0 auto;border:1px solid var(--line)}
+  .small{font-size:12px;color:#2b3832}
+
   @media(max-width:840px){
     .search{grid-template-columns:1fr 1fr 1fr}
   }
@@ -107,147 +115,170 @@
       <p>Your private reading feed</p>
     </div>
 
-    <!-- Stats row -->
-    <div class="stats" id="stats">
-      <div class="stat"><strong id="total-books">0</strong> books</div>
-      <div class="stat" title="Finished"><strong id="books-read">0</strong> read</div>
-      <div class="stat"><strong id="read-month">0</strong> this month</div>
-      <div class="stat"><strong id="read-year">0</strong> this year</div>
-      <div class="stat"><strong id="avg-rating">0.0</strong> avg ★</div>
+    <!-- OPTIONAL: simple user bar like Book Club -->
+    <div id="user-bar" class="user-bar">
+      <span>Welcome, <strong id="current-user-name"></strong>!</span>
+      <button class="pill-btn" id="logout-btn" type="button">Switch User</button>
     </div>
 
-    <main class="content">
-      <nav class="nav" id="main-nav">
-        <button class="nav-btn active" id="feed-btn" type="button">Library</button>
-        <button class="nav-btn" id="add-btn" type="button">Add Book</button>
-        <button class="nav-btn" id="my-books-btn" type="button">Lists</button>
-        <button class="nav-btn" id="prefs-btn" type="button">Goals & Backup</button>
-      </nav>
-
-      <section id="feed" class="section active">
-        <div class="search">
-          <input type="text" class="input" placeholder="Search title, author, tag…" id="search-input"/>
-          <select class="select" id="tag-filter"><option value="">All Tags</option></select>
-          <select class="select" id="category-filter"><option value="">All Categories</option></select>
-          <select class="select" id="min-rating"><option value="0">Min ★ (Any)</option><option value="5">5★</option><option value="4">4★+</option><option value="3">3★+</option></select>
-          <select class="select" id="sort-by"><option value="new">Newest</option><option value="rating">Highest Rated</option><option value="title">Title A–Z</option></select>
+    <!-- Login section (EXACT FLOW from Book Club: name-only gate, no auto-login) -->
+    <section id="login-section" class="login">
+      <form class="login-card" id="login-form">
+        <h2>Welcome to PlotLine</h2>
+        <p class="small" style="margin:6px 0 12px">Enter your first name to use your lists</p>
+        <div style="margin-bottom:10px;background:#f7f8f8;padding:8px;border-radius:8px;color:#1b2a23;font-size:12px;border:1px solid var(--line)">
+          This site doesn’t auto-log you in on refresh. Type the same name again to see your lists.
         </div>
+        <input class="input" type="text" id="username-input" placeholder="Your first name" required style="text-align:center"/>
+        <div style="height:8px"></div>
+        <button class="nav-btn" type="submit">Enter</button>
+      </form>
+    </section>
 
-        <div class="results-bar">
-          <span class="chip" id="result-count"></span>
-          <div class="results-right"><label class="chip"><input type="checkbox" id="collapse-all"> Collapse synopses</label></div>
-        </div>
+    <!-- Everything below is hidden until login -->
+    <section id="main-app" style="display:none">
+      <!-- Stats row -->
+      <div class="stats" id="stats">
+        <div class="stat"><strong id="total-books">0</strong> books</div>
+        <div class="stat" title="Finished"><strong id="books-read">0</strong> read</div>
+        <div class="stat"><strong id="read-month">0</strong> this month</div>
+        <div class="stat"><strong id="read-year">0</strong> this year</div>
+        <div class="stat"><strong id="avg-rating">0.0</strong> avg ★</div>
+      </div>
 
-        <div id="books-feed" class="feed"></div>
-      </section>
+      <main class="content">
+        <nav class="nav" id="main-nav">
+          <button class="nav-btn active" id="feed-btn" type="button">Library</button>
+          <button class="nav-btn" id="add-btn" type="button">Add Book</button>
+          <button class="nav-btn" id="my-books-btn" type="button">Lists</button>
+          <button class="nav-btn" id="prefs-btn" type="button">Goals & Backup</button>
+        </nav>
 
-      <section id="add" class="section">
-        <div class="post">
-          <h3 style="margin-bottom:8px">Add a Book</h3>
-          <div class="search" style="grid-template-columns:2fr 1fr">
-            <div class="dropdown" style="position:relative">
-              <input id="book-search" class="input" type="text" placeholder="Search Google Books to auto-fill…"/>
-              <div id="book-results" class="post" style="position:absolute;left:0;right:0;max-height:280px;overflow:auto;z-index:40;display:none"></div>
-            </div>
-            <div>
-              <label class="chip" style="display:inline-block;margin-bottom:6px">Initial Rating (optional)</label>
-              <div class="stars" id="rating-stars" aria-label="rating stars">
-                <div class="bg">★★★★★</div>
-                <div class="fg" style="width:0%">★★★★★</div>
-                <div class="star-hit" id="rating-hit"></div>
-              </div>
-              <div id="rating-feedback" class="chip" style="margin-left:8px">Click stars (supports ½★)</div>
-            </div>
+        <section id="feed" class="section active">
+          <div class="search">
+            <input type="text" class="input" placeholder="Search title, author, tag…" id="search-input"/>
+            <select class="select" id="tag-filter"><option value="">All Tags</option></select>
+            <select class="select" id="category-filter"><option value="">All Categories</option></select>
+            <select class="select" id="min-rating"><option value="0">Min ★ (Any)</option><option value="5">5★</option><option value="4">4★+</option><option value="3">3★+</option></select>
+            <select class="select" id="sort-by"><option value="new">Newest</option><option value="rating">Highest Rated</option><option value="title">Title A–Z</option></select>
           </div>
 
-          <form id="book-form">
-            <div class="search" style="grid-template-columns:1fr 1fr 1fr">
-              <div><label class="chip">Title *</label><input class="input" type="text" id="title" required/></div>
-              <div><label class="chip">Author *</label><input class="input" type="text" id="author" required/></div>
+          <div class="results-bar">
+            <span class="chip" id="result-count"></span>
+            <div class="results-right"><label class="chip"><input type="checkbox" id="collapse-all"> Collapse synopses</label></div>
+          </div>
+
+          <div id="books-feed" class="feed"></div>
+        </section>
+
+        <section id="add" class="section">
+          <div class="post">
+            <h3 style="margin-bottom:8px">Add a Book</h3>
+            <div class="search" style="grid-template-columns:2fr 1fr">
+              <div class="dropdown" style="position:relative">
+                <input id="book-search" class="input" type="text" placeholder="Search Google Books to auto-fill…"/>
+                <div id="book-results" class="post" style="position:absolute;left:0;right:0;max-height:280px;overflow:auto;z-index:40;display:none"></div>
+              </div>
               <div>
-                <label class="chip">Category</label>
-                <select class="select" id="genre"></select>
+                <label class="chip" style="display:inline-block;margin-bottom:6px">Initial Rating (optional)</label>
+                <div class="stars" id="rating-stars" aria-label="rating stars">
+                  <div class="bg">★★★★★</div>
+                  <div class="fg" style="width:0%">★★★★★</div>
+                  <div class="star-hit" id="rating-hit"></div>
+                </div>
+                <div id="rating-feedback" class="chip" style="margin-left:8px">Click stars (supports ½★)</div>
               </div>
             </div>
 
-            <div class="search" style="grid-template-columns:1fr 1fr">
-              <div><label class="chip">Cover Image (URL)</label><input class="input" type="url" id="book-image" placeholder="https://…"/></div>
-              <div><label class="chip">Tags</label>
-                <input type="text" class="input" id="tag-input" placeholder="Comma-separated (e.g., catholic, fiction)"/>
+            <form id="book-form">
+              <div class="search" style="grid-template-columns:1fr 1fr 1fr">
+                <div><label class="chip">Title *</label><input class="input" type="text" id="title" required/></div>
+                <div><label class="chip">Author *</label><input class="input" type="text" id="author" required/></div>
+                <div>
+                  <label class="chip">Category</label>
+                  <select class="select" id="genre"></select>
+                </div>
               </div>
+
+              <div class="search" style="grid-template-columns:1fr 1fr">
+                <div><label class="chip">Cover Image (URL)</label><input class="input" type="url" id="book-image" placeholder="https://…"/></div>
+                <div><label class="chip">Tags</label>
+                  <input type="text" class="input" id="tag-input" placeholder="Comma-separated (e.g., catholic, fiction)"/>
+                </div>
+              </div>
+
+              <div><label class="chip">Synopsis</label><textarea class="textarea" id="synopsis" placeholder="Book description…"></textarea></div>
+
+              <div class="search" style="grid-template-columns:1fr 1fr 1fr">
+                <div>
+                  <label class="chip">Add to</label>
+                  <select id="initial-status" class="select">
+                    <option value="wish">Want to Read</option>
+                    <option value="reading">Currently Reading</option>
+                    <option value="read">Already Read</option>
+                  </select>
+                </div>
+                <div></div><div></div>
+              </div>
+
+              <div style="height:6px"></div>
+              <button type="submit" class="action">Save Book</button>
+            </form>
+          </div>
+        </section>
+
+        <section id="my-books" class="section">
+          <h3 style="margin-bottom:8px">My Lists</h3>
+          <div class="post" style="margin-bottom:8px"><h4>Want to Read</h4><div id="wish-list"></div></div>
+          <div class="post" style="margin-bottom:8px"><h4>Currently Reading</h4><div id="current-reading"></div></div>
+          <div class="post"><h4>Read</h4><div id="read-list"></div></div>
+        </section>
+
+        <section id="prefs" class="section">
+          <h2 style="margin-bottom:8px;color:var(--ink);font-size:1.1rem">Goals & Backup</h2>
+
+          <div class="post" style="margin-bottom:10px">
+            <h3>Reading Goals</h3>
+            <div class="search" style="grid-template-columns:repeat(4,1fr)">
+              <div><label class="chip">Year</label><input id="goal-year" class="input" type="number"/></div>
+              <div><label class="chip">Total Books</label><input id="goal-total" class="input" type="number"/></div>
+              <div><label class="chip">Catholic</label><input id="goal-catholic" class="input" type="number"/></div>
+              <div><label class="chip">Fiction</label><input id="goal-fiction" class="input" type="number"/></div>
             </div>
-
-            <div><label class="chip">Synopsis</label><textarea class="textarea" id="synopsis" placeholder="Book description…"></textarea></div>
-
-            <div class="search" style="grid-template-columns:1fr 1fr 1fr">
-              <div>
-                <label class="chip">Add to</label>
-                <select id="initial-status" class="select">
-                  <option value="wish">Want to Read</option>
-                  <option value="reading">Currently Reading</option>
-                  <option value="read">Already Read</option>
-                </select>
-              </div>
+            <div class="search" style="grid-template-columns:repeat(3,1fr)">
+              <div><label class="chip">Nonfiction</label><input id="goal-nonfiction" class="input" type="number"/></div>
               <div></div><div></div>
             </div>
-
-            <div style="height:6px"></div>
-            <button type="submit" class="action">Save Book</button>
-          </form>
-        </div>
-      </section>
-
-      <section id="my-books" class="section">
-        <h3 style="margin-bottom:8px">My Lists</h3>
-        <div class="post" style="margin-bottom:8px"><h4>Want to Read</h4><div id="wish-list"></div></div>
-        <div class="post" style="margin-bottom:8px"><h4>Currently Reading</h4><div id="current-reading"></div></div>
-        <div class="post"><h4>Read</h4><div id="read-list"></div></div>
-      </section>
-
-      <section id="prefs" class="section">
-        <h2 style="margin-bottom:8px;color:var(--ink);font-size:1.1rem">Goals & Backup</h2>
-
-        <div class="post" style="margin-bottom:10px">
-          <h3>Reading Goals</h3>
-          <div class="search" style="grid-template-columns:repeat(4,1fr)">
-            <div><label class="chip">Year</label><input id="goal-year" class="input" type="number"/></div>
-            <div><label class="chip">Total Books</label><input id="goal-total" class="input" type="number"/></div>
-            <div><label class="chip">Catholic</label><input id="goal-catholic" class="input" type="number"/></div>
-            <div><label class="chip">Fiction</label><input id="goal-fiction" class="input" type="number"/></div>
+            <button id="save-goals" class="action" type="button">Save Goals</button>
           </div>
-          <div class="search" style="grid-template-columns:repeat(3,1fr)">
-            <div><label class="chip">Nonfiction</label><input id="goal-nonfiction" class="input" type="number"/></div>
-            <div></div><div></div>
-          </div>
-          <button id="save-goals" class="action" type="button">Save Goals</button>
-        </div>
 
-        <div class="post" style="margin-bottom:10px">
-          <h3>Export / Backup</h3>
-          <p class="chip" style="display:inline-block;margin-bottom:6px">Downloads CSV + JSON. (Cloud sync optional)</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button id="export-csv-btn" class="action" type="button">Download CSVs</button>
-            <button id="export-json-btn" class="action" type="button">Download JSON</button>
-            <label class="action" style="cursor:pointer">Import JSON<input type="file" id="import-json" accept="application/json" style="display:none"></label>
+          <div class="post" style="margin-bottom:10px">
+            <h3>Export / Backup</h3>
+            <p class="chip" style="display:inline-block;margin-bottom:6px">Downloads CSV + JSON. (Cloud sync optional)</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button id="export-csv-btn" class="action" type="button">Download CSVs</button>
+              <button id="export-json-btn" class="action" type="button">Download JSON</button>
+              <label class="action" style="cursor:pointer">Import JSON<input type="file" id="import-json" accept="application/json" style="display:none"></label>
+            </div>
           </div>
-        </div>
 
-        <div class="post">
-          <h3>Cloud Sync (JSONBin)</h3>
-          <p class="chip" id="sync-status">Idle</p>
-          <div class="search" style="grid-template-columns:2fr 2fr auto auto">
-            <input id="cloud-api" class="input" placeholder="X-Master-Key or Access Key"/>
-            <input id="cloud-bin" class="input" placeholder="Bin ID"/>
-            <button id="cloud-save" class="action" type="button">Save</button>
-            <button id="cloud-create" class="action" type="button">Create New Bin</button>
+          <div class="post">
+            <h3>Cloud Sync (JSONBin)</h3>
+            <p class="chip" id="sync-status">Idle</p>
+            <div class="search" style="grid-template-columns:2fr 2fr auto auto">
+              <input id="cloud-api" class="input" placeholder="Using Book Club creds" disabled/>
+              <input id="cloud-bin" class="input" placeholder="Using Book Club creds" disabled/>
+              <button id="cloud-save" class="action" type="button" disabled>Save</button>
+              <button id="cloud-create" class="action" type="button">Create New Bin</button>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button id="cloud-pull" class="action" type="button">Pull</button>
+              <button id="cloud-push" class="action" type="button">Push</button>
+            </div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button id="cloud-pull" class="action" type="button">Pull</button>
-            <button id="cloud-push" class="action" type="button">Push</button>
-          </div>
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
+    </section>
   </div>
 
   <div id="toast" class="toast"></div>
@@ -278,10 +309,27 @@ function formatDate(v){ var n=Number(v); var d=new Date(isFinite(n)?n:v); try{ r
 function showToast(msg,isError){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.toggle('error',!!isError); t.classList.add('show'); clearTimeout(showToast._t); showToast._t=setTimeout(function(){ t.classList.remove('show'); }, isError?3200:1800); }
 function truncate(s,n){ s=String(s||''); n=n||300; return s.length>n? s.slice(0,n-1)+'…' : s; }
 
-/* ===== Storage / Cloud ===== */
+/* ===== Book Club–style login state (name-only) ===== */
+let currentUser = '';
+function gateToLogin(){
+  document.getElementById('login-section').style.display='block';
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('user-bar').style.display='none';
+  currentUser = '';
+}
+function gateToApp(name){
+  currentUser = name;
+  document.getElementById('current-user-name').textContent = name;
+  document.getElementById('login-section').style.display='none';
+  document.getElementById('main-app').style.display='';
+  document.getElementById('user-bar').style.display='flex';
+}
+
+/* ===== Storage / Cloud (Book Club–style JSONBin usage kept for PlotLine) ===== */
 const JSONBIN_API = 'https://api.jsonbin.io/v3';
-let BIN_ID = localStorage.getItem('68b3cb8dd0ea881f406ca19e') || '';
-let API_KEY = localStorage.getItem('$2a$10$iBSfMhVt0mOYgC1uNUPBkuxj6plaS6MOuzL4JPvYzPWsVhJSroRTa') || '';
+// Using your PlotLine bin; namespaced under record.plotline so it won't clash
+const BIN_ID = '68b3cb8dd0ea881f406ca19e';
+const API_KEY = '$2a$10$iBSfMhVt0mOYgC1uNUPBkuxj6plaS6MOuzL4JPvYzPWsVhJSroRTa';
 
 let books = [];
 let sitePrefs = { goals: { year: new Date().getFullYear(), total: 0, byTag: { catholic:0, fiction:0, nonfiction:0 } } };
@@ -291,97 +339,44 @@ function jbHeaders(){ return { 'Content-Type':'application/json', 'X-Master-Key'
 // Namespace helper: prefer record.plotline if present
 function ns(record){ return (record && record.plotline) ? record.plotline : record; }
 
-/* ===== Storage / Cloud (Book Club–style auto sync) ===== */
-const JSONBIN_API = 'https://api.jsonbin.io/v3';
-const BIN_ID = '68b3cb8dd0ea881f406ca19e';
-const API_KEY = '$2a$10$iBSfMhVt0mOYgC1uNUPBkuxj6plaS6MOuzL4JPvYzPWsVhJSroRTa';
-
-let books = [];
-let sitePrefs = { goals: { year: new Date().getFullYear(), total: 0, byTag: { catholic:0, fiction:0, nonfiction:0 } } };
-
-/** Auto-pull like Book Club: load local first, then try remote (if configured). */
 async function loadAll(){
-  // 1) Local cache
-  try{
-    const cached = JSON.parse(localStorage.getItem('plotline_payload')||'{}');
-    if (cached.books) books = cached.books;
-    if (cached.sitePrefs) sitePrefs = cached.sitePrefs;
-  }catch(_e){}
-
-  // 2) Remote (only if key+bin are set)
-  if (!API_KEY || !BIN_ID) return; // UI still works locally until user saves creds
-
-  try{
-    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': API_KEY }
-    });
-    if (!r.ok) throw new Error(await r.text());
-    const data = await r.json();
-    const record = data.record || {};
-    const scoped = ns(record);
-    // Prefer namespaced payload; fall back to root fields if present
-    books = Array.isArray(scoped?.books) ? scoped.books : (record.books || books || []);
-    sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs || {});
-    // Re-cache locally
-    localStorage.setItem('plotline_payload', JSON.stringify({ books, sitePrefs }));
-  }catch(e){
-    console.warn('Using local data; JSONBin sync failed:', e);
-  }
-}
-
-/** Auto-push like Book Club: always cache locally, then PUT to JSONBin when configured. */
-async function saveAll(){
-  // 1) Local cache
-  try{
-    localStorage.setItem('plotline_payload', JSON.stringify({ books, sitePrefs }));
-  }catch(_e){}
-
-  // 2) Remote (only if key+bin are set)
-  if (!API_KEY || !BIN_ID) return;
-
-  try{
-    // Merge with whatever else might live in the same bin (don’t clobber other apps)
-    let record = {};
-    try{
-      const latest = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, {
-        headers: { 'X-Master-Key': API_KEY }
-      });
-      if (latest.ok){
-        const j = await latest.json();
-        record = j.record || {};
-      }
-    }catch(_e){}
-
-    record.plotline = { books, sitePrefs };
-
-    await fetch(`${JSONBIN_API}/b/${BIN_ID}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': API_KEY
-      },
-      body: JSON.stringify(record)
-    });
-  }catch(e){
-    console.warn('Remote save failed:', e);
-  }
-}
-  
-async function loadAll(){
+  // 1) local cache first
   try{
     var cached = JSON.parse(localStorage.getItem('plotline_payload')||'{}');
     if(cached.books) books = cached.books;
     if(cached.sitePrefs) sitePrefs = cached.sitePrefs;
   }catch(_e){}
-  // Optional cloud pull on first run if configured
+
+  // 2) remote pull
+  try{
+    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`,{headers: jbHeaders()});
+    if(!r.ok) throw new Error(await r.text());
+    const data=await r.json();
+    const record=data.record||{};
+    const scoped = ns(record);
+    books = (scoped && Array.isArray(scoped.books)) ? scoped.books : (record.books || books);
+    sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs);
+    try{ localStorage.setItem('plotline_payload', JSON.stringify({books,sitePrefs})); }catch(_e){}
+    var s=document.getElementById('sync-status'); if(s) s.textContent='Pulled';
+  }catch(e){ console.warn('Using local data; sync failed.', e); var s2=document.getElementById('sync-status'); if(s2) s2.textContent='Pull failed'; }
 }
 async function saveAll(){
+  // local cache
   try{ localStorage.setItem('plotline_payload', JSON.stringify({books,sitePrefs})); }catch(_e){}
+
+  // remote push (merge into namespaced record)
+  try{
+    const latest = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, { headers: jbHeaders() });
+    let record = latest.ok ? ((await latest.json()).record || {}) : {};
+    record.plotline = { books, sitePrefs };
+    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}`,{ method:'PUT', headers: jbHeaders(), body: JSON.stringify(record) });
+    if(!r.ok) throw new Error(await r.text());
+    var s=document.getElementById('sync-status'); if(s) s.textContent='Pushed';
+  }catch(e){ console.warn('Remote save failed',e); var s2=document.getElementById('sync-status'); if(s2) s2.textContent='Push failed'; }
 }
 
 async function cloudPull(){
   try{
-    if(!API_KEY || !BIN_ID){ document.getElementById('sync-status').textContent = 'Set API key & bin first'; return; }
     document.getElementById('sync-status').textContent = 'Pulling…';
     const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`,{headers: jbHeaders()});
     if(!r.ok) throw new Error(await r.text());
@@ -398,15 +393,11 @@ async function cloudPull(){
 }
 async function cloudPush(){
   try{
-    if(!API_KEY || !BIN_ID){ document.getElementById('sync-status').textContent = 'Set API key & bin first'; return; }
     document.getElementById('sync-status').textContent = 'Pushing…';
-    // Merge with whatever's already in the bin so other apps aren't touched
     const latest = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, { headers: jbHeaders() });
     let record = latest.ok ? ((await latest.json()).record || {}) : {};
     record.plotline = { books, sitePrefs };
-    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}`,{
-      method:'PUT', headers: jbHeaders(), body: JSON.stringify(record)
-    });
+    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}`,{ method:'PUT', headers: jbHeaders(), body: JSON.stringify(record) });
     if(!r.ok) throw new Error(await r.text());
     document.getElementById('sync-status').textContent='Pushed';
     showToast('Cloud pushed');
@@ -414,7 +405,6 @@ async function cloudPush(){
 }
 async function cloudCreate(){
   try{
-    if(!API_KEY){ showToast('Enter API key first',true); return; }
     document.getElementById('sync-status').textContent = 'Creating…';
     const initial = { plotline: { books, sitePrefs } };
     const r=await fetch(`${JSONBIN_API}/b`,{method:'POST',headers: jbHeaders(),body:JSON.stringify(initial)});
@@ -422,16 +412,14 @@ async function cloudCreate(){
     const data=await r.json();
     const newId=(data.metadata && data.metadata.id)||data.id;
     if(!newId) throw new Error('No Bin ID');
-    BIN_ID=newId; localStorage.setItem('plotline_bin',BIN_ID);
-    updateCloudInputsUI();
+    showToast('New JSONBin created: '+newId);
     document.getElementById('sync-status').textContent='New bin created';
-    showToast('New JSONBin created');
   }catch(e){ console.warn(e); document.getElementById('sync-status').textContent='Create failed'; showToast('Create failed',true); }
 }
 function updateCloudInputsUI(){
   const api=document.getElementById('cloud-api'); const bin=document.getElementById('cloud-bin');
-  if(api) api.value = API_KEY || '';
-  if(bin) bin.value = BIN_ID || '';
+  if(api){ api.value=''; api.placeholder='Using hard-coded key'; api.disabled=true; }
+  if(bin){ bin.value=''; bin.placeholder='Using hard-coded bin'; bin.disabled=true; }
 }
 
 /* ===== Data Model Helpers ===== */
@@ -473,17 +461,12 @@ function setWish(b){ b.status='wish'; b.wantAt = b.wantAt || nowISO(); }
 function goodreadsUrl(book){ var q=((book.title||'')+' '+(book.author||'')).trim(); return 'https://www.goodreads.com/search?q='+encodeURIComponent(q)+'&search_type=books'; }
 
 /* ===== Rendering ===== */
-function starWidthFromRating(r){ // 0..5 -> 0..100%
-  r = Math.max(0, Math.min(5, Number(r)||0));
-  return (r/5*100).toFixed(0)+'%';
-}
-function starWidgetHTML(widthPct){
-  return '<div class="stars"><div class="bg">★★★★★</div><div class="fg" style="width:'+escapeAttr(widthPct)+'">★★★★★</div></div>';
-}
+function starWidthFromRating(r){ r = Math.max(0, Math.min(5, Number(r)||0)); return (r/5*100).toFixed(0)+'%'; }
+function starWidgetHTML(widthPct){ return '<div class="stars"><div class="bg">★★★★★</div><div class="fg" style="width:'+escapeAttr(widthPct)+'">★★★★★</div></div>'; }
 function youStatusLine(b){
+  if(!currentUser) return '';
   if(b.status==='read'){
-    const r=b.rating?` — ${b.rating.toFixed(1)}★`:'';
-    return `<div class="status-note"><strong>You</strong> finished on ${formatDate(b.finishAt)}${r}</div>`;
+    const r=b.rating?` — ${b.rating.toFixed(1)}★`:''; return `<div class="status-note"><strong>You</strong> finished on ${formatDate(b.finishAt)}${r}</div>`;
   }
   if(b.status==='reading') return `<div class="status-note"><strong>You</strong> started on ${formatDate(b.startAt)}</div>`;
   if(b.status==='wish') return `<div class="status-note"><strong>You</strong> want to read (added ${formatDate(b.wantAt)})</div>`;
@@ -499,8 +482,10 @@ function synBlock(book){
     '</div>'
   ].join('');
 }
-function tagChips(tags){ if(!tags||!tags.length) return ''; return '<div class="tags">'+tags.map(t=>'
-<span class="tag">'+escapeHtml(t)+'</span>').join('')+'</div>'; }
+function tagChips(tags){
+  if(!tags || !tags.length) return '';
+  return '<div class="tags">' + tags.map(function(t){ return '<span class="tag">'+escapeHtml(t)+'</span>'; }).join('') + '</div>';
+}
 function bookCoverBlock(book){ var link=goodreadsUrl(book); if(book.image){ return '<a href="'+link+'" target="_blank" rel="noopener noreferrer"><img class="cover" loading="lazy" alt="Cover of '+escapeHtml(book.title)+'" src="'+escapeAttr(book.image)+'"/></a>'; } return '<a href="'+link+'" target="_blank" rel="noopener noreferrer" class="cover-ph">No Cover</a>'; }
 
 function bookCard(book){
@@ -626,7 +611,7 @@ const searchGoogleBooks=async function(q){
     const data=await r.json(); input.classList.remove('loading');
     lastSearchItems=(data.items||[]).map(function(it,i){ var v=it.volumeInfo||{}; return { index:i, title:v.title||'Unknown Title', authors:(v.authors||[]).join(', ')||'Unknown Author', cover:(v.imageLinks&&v.imageLinks.thumbnail)||'', description:v.description||'', categories:v.categories||[] }; });
     if(!lastSearchItems.length){ box.innerHTML='<div class="chip" style="padding:8px">No results</div>'; box.style.display='block'; return; }
-    box.innerHTML=lastSearchItems.map(function(r){ return '<div class="head" data-pick="'+r.index+'" style="justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0"><div style="display:flex;gap:8px;align-items:center>'+(r.cover?('<img src="'+escapeAttr(r.cover)+'" style="width:24px;height:36px;border-radius:4px;border:1px solid #e6ece8;object-fit:cover">'):'<div style="width:24px;height:36px;border-radius:4px;background:#e9ecef"></div>')+'<div><strong>'+escapeHtml(r.title)+'</strong><div class="chip" style="margin-top:2px">'+escapeHtml(r.authors)+'</div></div></div>'+( (r.categories&&r.categories.length)?('<span class="chip">'+escapeHtml(r.categories[0])+'</span>') : '' )+'</div>'; }).join('');
+    box.innerHTML=lastSearchItems.map(function(r){ return '<div class="head" data-pick="'+r.index+'" style="justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0"><div style="display:flex;gap:8px;align-items:center">'+(r.cover?('<img src="'+escapeAttr(r.cover)+'" style="width:24px;height:36px;border-radius:4px;border:1px solid #e6ece8;object-fit:cover">'):'<div style="width:24px;height:36px;border-radius:4px;background:#e9ecef"></div>')+'<div><strong>'+escapeHtml(r.title)+'</strong><div class="chip" style="margin-top:2px">'+escapeHtml(r.authors)+'</div></div></div>'+( (r.categories&&r.categories.length)?('<span class="chip">'+escapeHtml(r.categories[0])+'</span>') : '' )+'</div>'; }).join('');
     box.style.display='block';
   }catch(e){ input.classList.remove('loading'); console.warn(e); box.innerHTML='<div class="chip" style="padding:8px;color:#b74a4a">Search failed. Try again.</div>'; box.style.display='block'; }
 };
@@ -637,8 +622,7 @@ function toCsvRow(arr){ function escCsvStr(s){ return String(s==null?'':s).repla
 function exportCsvs(){
   var booksHeader = toCsvRow(['id','title','author','genre','image','rating','tags','synopsis','status','wantAt','startAt','finishAt']);
   var booksRows = books.map(function(b){return toCsvRow([b.id,b.title,b.author,b.genre,b.image||'',(b.rating||0).toFixed(1),(b.tags||[]).join('|'),(b.synopsis||''),b.status||'',b.wantAt||'',b.startAt||'',b.finishAt||'']);});
-  download('books.csv',[booksHeader].concat(booksRows).join('
-'));
+  download('books.csv',[booksHeader].concat(booksRows).join('\n'));
   download('plotline-export.json',JSON.stringify({books,sitePrefs},null,2),'application/json');
 }
 function exportJson(){ download('plotline-export.json',JSON.stringify({books,sitePrefs},null,2),'application/json'); }
@@ -647,8 +631,7 @@ function importJson(file){ var fr=new FileReader(); fr.onload=function(){ try{ v
 /* ===== Modal / Rating (half-star) ===== */
 let ratingDraft = 0; let finishContext=null;
 function bindStarHit(elFg, elHit, feedbackEl){
-  function setFromIndex(i){ // i = 0..9 -> rating in 0.5 steps
-    const r = (i+1)/2; ratingDraft = r; elFg.style.width = starWidthFromRating(r); if(feedbackEl) feedbackEl.textContent = r.toFixed(1)+'★'; }
+  function setFromIndex(i){ const r = (i+1)/2; ratingDraft = r; elFg.style.width = starWidthFromRating(r); if(feedbackEl) feedbackEl.textContent = r.toFixed(1)+'★'; }
   elHit.innerHTML = Array.from({length:10},(_,i)=>`<button type="button" data-i="${i}"></button>`).join('');
   elHit.addEventListener('click', function(e){ var btn=e.target.closest('button'); if(!btn) return; var i=Number(btn.getAttribute('data-i')); setFromIndex(i); });
 }
@@ -657,16 +640,29 @@ function closeFinishModal(){ document.getElementById('finish-modal').classList.r
 
 /* ===== Boot / Events ===== */
 document.addEventListener('DOMContentLoaded', async function(){
-  // Basic setup
+  // PWA manifest/light SW like before
   (function setupPWA(){ try{ const manifest={name:'PlotLine',short_name:'PlotLine',start_url:'.',display:'standalone',background_color:'#ffffff',theme_color:'#2f4a3e',icons:[{src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAAAAABQFZ1hAAAAC0lEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAB4p1nNAAE=',sizes:'192x192',type:'image/png'}]}; const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}); const url=URL.createObjectURL(blob); const link=document.getElementById('app-manifest'); if(link) link.href=url; if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){ const sw="self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open('pl-v1').then(c=>c.addAll(['./'])))});self.addEventListener('activate',e=>self.clients.claim());self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})"; const swUrl=URL.createObjectURL(new Blob([sw],{type:'text/javascript'})); navigator.serviceWorker.register(swUrl).catch(function(){}); } }catch(_e){} })();
 
-  await loadAll();
-  populateCategoryOptions();
-  populateTagFilter();
-  applyFilters();
-  renderMyLists();
-  updateStats();
-  updateCloudInputsUI();
+  // --- Book Club–style login wiring (exact UX: name-only, no auto-login) ---
+  gateToLogin();
+  document.getElementById('login-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    const name=(document.getElementById('username-input').value||'').trim();
+    if(!name){ showToast('Enter your name to continue',true); return; }
+    gateToApp(name);
+    // after entering, we finish loading/rendering
+    loadAll().then(function(){
+      populateCategoryOptions();
+      populateTagFilter();
+      applyFilters();
+      renderMyLists();
+      updateStats();
+      updateCloudInputsUI();
+    });
+  });
+  document.getElementById('logout-btn').addEventListener('click', function(){
+    gateToLogin();
+  });
 
   // Nav
   document.getElementById('feed-btn').addEventListener('click', function(){ openSection('feed'); applyFilters(); });
@@ -691,11 +687,34 @@ document.addEventListener('DOMContentLoaded', async function(){
   (function initAddRating(){ var fg=document.querySelector('#rating-stars .fg'); var hit=document.getElementById('rating-hit'); bindStarHit(fg,hit,document.getElementById('rating-feedback')); })();
 
   // Add book form
-  document.getElementById('book-form').addEventListener('submit', function(e){ e.preventDefault(); var title=document.getElementById('title').value.trim(), author=document.getElementById('author').value.trim(); if(!title||!author){ showToast('Title and author are required.',true); return; } var genre=document.getElementById('genre').value; var image=document.getElementById('book-image').value.trim(); var synopsis=document.getElementById('synopsis').value.trim(); var tags=(document.getElementById('tag-input').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean); var status=document.getElementById('initial-status').value; var b=newBook({title,author,genre,image,synopsis,tags,status,rating:ratingDraft}); if(ratingDraft>0 && status==='read'){ b.rating=ratingDraft; if(b.sessions.length){ b.sessions[b.sessions.length-1].rating=ratingDraft; } } books.unshift(b); saveAll(); populateTagFilter(); applyFilters(); renderMyLists(); updateStats(); this.reset(); ratingDraft=0; document.querySelector('#rating-stars .fg').style.width='0%'; document.getElementById('rating-feedback').textContent='Click stars (supports ½★)'; showToast('Book saved'); });
+  document.getElementById('book-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    if(!currentUser){ showToast('Please enter your name to use PlotLine.', true); return; }
+    var title=document.getElementById('title').value.trim(), author=document.getElementById('author').value.trim();
+    if(!title||!author){ showToast('Title and author are required.',true); return; }
+    var genre=document.getElementById('genre').value;
+    var image=document.getElementById('book-image').value.trim();
+    var synopsis=document.getElementById('synopsis').value.trim();
+    var tags=(document.getElementById('tag-input').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+    var status=document.getElementById('initial-status').value;
+    var b=newBook({title,author,genre,image,synopsis,tags,status,rating:ratingDraft});
+    if(ratingDraft>0 && status==='read'){ b.rating=ratingDraft; if(b.sessions.length){ b.sessions[b.sessions.length-1].rating=ratingDraft; } }
+    books.unshift(b); saveAll(); populateTagFilter(); applyFilters(); renderMyLists(); updateStats();
+    this.reset(); ratingDraft=0; document.querySelector('#rating-stars .fg').style.width='0%'; document.getElementById('rating-feedback').textContent='Click stars (supports ½★)';
+    showToast('Book saved');
+  });
 
-  // Lists and feed actions (event delegation)
-  document.addEventListener('click',function(e){ var btn=e.target.closest && e.target.closest('[data-action]'); if(!btn) return; var action=btn.getAttribute('data-action'); var bookId=btn.getAttribute('data-id'); function findBook(id){ return books.find(x=>String(x.id)===String(id)); }
-    if(action==='toggle-synopsis'){ var id=bookId; var wrap=document.querySelector('.syn[data-syn="'+id+'"]'); if(!wrap) return; var span=wrap.querySelector('.syn-text'); if(!span) return; var expanded=span.getAttribute('data-expanded')==='true'; var full=(findBook(id).synopsis||''); if(expanded){ span.textContent=(full.length>280? full.slice(0,279)+'…' : full); span.setAttribute('data-expanded','false'); btn.textContent='Read more'; }else{ span.textContent=full; span.setAttribute('data-expanded','true'); btn.textContent='Show less'; } return; }
+  // Lists and feed actions (delegation)
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest && e.target.closest('[data-action]'); if(!btn) return;
+    if(!currentUser){ showToast('Please enter your name to use PlotLine.', true); return; }
+    var action=btn.getAttribute('data-action'); var bookId=btn.getAttribute('data-id');
+    function findBook(id){ return books.find(x=>String(x.id)===String(id)); }
+
+    if(action==='toggle-synopsis'){
+      var id=bookId; var wrap=document.querySelector('.syn[data-syn="'+id+'"]'); if(!wrap) return; var span=wrap.querySelector('.syn-text'); if(!span) return;
+      var expanded=span.getAttribute('data-expanded')==='true'; var full=(findBook(id).synopsis||''); if(expanded){ span.textContent=(full.length>280? full.slice(0,279)+'…' : full); span.setAttribute('data-expanded','false'); btn.textContent='Read more'; }else{ span.textContent=full; span.setAttribute('data-expanded','true'); btn.textContent='Show less'; } return;
+    }
     if(action==='wish'){ var b=findBook(bookId); if(!b) return; setWish(b); saveAll(); applyFilters(); renderMyLists(); updateStats(); showToast('Moved to Want to Read'); return; }
     if(action==='reading'){ var b2=findBook(bookId); if(!b2) return; startReading(b2); saveAll(); applyFilters(); renderMyLists(); updateStats(); showToast('Marked as Currently Reading'); return; }
     if(action==='finish'){ var b3=findBook(bookId); if(!b3) return; openFinishModal(b3); return; }
@@ -704,7 +723,15 @@ document.addEventListener('DOMContentLoaded', async function(){
   });
 
   // Finish modal
-  document.getElementById('finish-save').addEventListener('click', function(){ try{ if(!finishContext){ closeFinishModal(); return; } var book=books.find(b=>b.id===finishContext.bookId); if(!book){ closeFinishModal(); return; } finishReading(book, ratingDraft||book.rating||0); saveAll(); closeFinishModal(); renderMyLists(); applyFilters(); updateStats(); showToast('Marked as read!'); }catch(e){ console.warn(e); closeFinishModal(); showToast('Saved locally. If something looks off, refresh.',true); } });
+  document.getElementById('finish-save').addEventListener('click', function(){
+    try{
+      if(!finishContext){ closeFinishModal(); return; }
+      var book=books.find(b=>b.id===finishContext.bookId);
+      if(!book){ closeFinishModal(); return; }
+      finishReading(book, ratingDraft||book.rating||0);
+      saveAll(); closeFinishModal(); renderMyLists(); applyFilters(); updateStats(); showToast('Marked as read!');
+    }catch(e){ console.warn(e); closeFinishModal(); showToast('Saved locally. If something looks off, refresh.',true); }
+  });
   document.getElementById('finish-cancel').addEventListener('click', closeFinishModal);
   document.addEventListener('keydown',function(e){ if(e.key==='Escape' && document.getElementById('finish-modal').classList.contains('show')) closeFinishModal(); });
   document.addEventListener('click',function(e){ var m=document.getElementById('finish-modal'); if(!m || !m.classList.contains('show')) return; if(!m.contains(e.target)) closeFinishModal(); });
@@ -719,12 +746,14 @@ document.addEventListener('DOMContentLoaded', async function(){
   document.getElementById('export-json-btn').addEventListener('click', exportJson);
   document.getElementById('import-json').addEventListener('change', function(e){ var f=e.target.files && e.target.files[0]; if(f) importJson(f); e.target.value=''; });
 
-
+  // Cloud controls (using hard-coded creds)
+  document.getElementById('cloud-save').addEventListener('click', function(){ showToast('Credentials are hard-coded here.', true); });
+  document.getElementById('cloud-create').addEventListener('click', cloudCreate);
+  document.getElementById('cloud-pull').addEventListener('click', cloudPull);
+  document.getElementById('cloud-push').addEventListener('click', cloudPush);
+});
 
 function openSection(id){ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); if(id==='feed') document.getElementById('feed-btn').classList.add('active'); if(id==='add') document.getElementById('add-btn').classList.add('active'); if(id==='my-books') document.getElementById('my-books-btn').classList.add('active'); if(id==='prefs') document.getElementById('prefs-btn').classList.add('active'); }
 </script>
 </body>
 </html>
-
-
-
