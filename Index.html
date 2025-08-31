@@ -1,0 +1,730 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PlotLine</title>
+
+<!-- PWA / Home-screen meta -->
+<meta name="theme-color" content="#2f4a3e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PlotLine">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link id="app-manifest" rel="manifest">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAANgAAADYCAQAAAAzSx0mAAAAC0lEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAB4p1nNAAE="/>
+
+<style>
+  :root{
+    /* Goodreads-inspired palette */
+    --paper:#f4f1ea;
+    --paper-2:#fbfaf7;
+    --ink:#382110;
+    --ink-2:#333;
+    --accent:#00635d;            /* Goodreads teal */
+    --gold:#f4c150;              /* star gold */
+    --line:#d6d0c4;
+    --muted:#6a5d50;
+    --shadow:0 2px 6px rgba(0,0,0,.06);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;background:var(--paper);color:var(--ink);min-height:100vh;padding:14px}
+  .container{max-width:980px;margin:0 auto}
+  .header{color:var(--ink);text-align:center;margin-bottom:14px}
+  .header h1{font-size:1.8rem;margin-bottom:4px;font-family:Georgia,'Times New Roman',serif;font-weight:700}
+  .header p{opacity:.9;font-size:.95rem}
+
+  .stats{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .stat{background:#fff;padding:8px 10px;border-radius:10px;border:1px solid var(--line);box-shadow:var(--shadow);font-size:12px;display:flex;align-items:center;gap:8px}
+  .stat strong{font-size:18px;line-height:1}
+
+  .content{background:#fff;border-radius:12px;padding:16px;box-shadow:var(--shadow);border:1px solid var(--line)}
+
+  .nav{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .nav-btn{background:transparent;color:var(--accent);border:none;padding:8px 10px;border-bottom:2px solid transparent;border-radius:0;font-size:13px;font-weight:800;cursor:pointer}
+  .nav-btn:hover{color:#004f49}
+  .nav-btn.active{border-color:var(--accent)}
+
+  .search{display:grid;grid-template-columns:2fr 1fr repeat(3,1fr);gap:8px;margin:8px 0}
+  .input,.select,.textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:14px;background:#fff}
+  .input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,99,93,.08)}
+
+  .chip{background:#ede6d6;border:1px solid #e1d7c6;color:#5a4632;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700}
+
+  .section{display:none}.section.active{display:block}
+
+  .feed{display:flex;flex-direction:column;gap:12px}
+  .post{border:1px solid var(--line);border-left:4px solid #ddd;border-radius:8px;padding:12px;background:#fff;box-shadow:var(--shadow)}
+  .head{display:flex;gap:12px;align-items:flex-start}
+  .cover{width:64px;height:96px;object-fit:cover;border-radius:4px;border:1px solid #e6ece8;flex-shrink:0}
+  .cover-ph{width:64px;height:96px;background:linear-gradient(135deg,#e9ecef 0%,#dee2e6 100%);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#2d3436;flex-shrink:0}
+  .info{flex:1}
+  .genre{background:#ede6d6;color:#5a4632;border:1px solid #e1d7c6;padding:1px 8px;border-radius:12px;font-size:11px;font-weight:800;display:inline-block;margin-bottom:6px}
+  .title{font-size:1.08rem;font-weight:900;color:var(--ink);line-height:1.2;font-family:Georgia,'Times New Roman',serif}
+  .author{color:var(--muted);font-style:italic;margin:2px 0 4px;font-size:13px}
+  .rating-line{display:flex;align-items:center;gap:8px;font-size:12px;margin:2px 0 6px;color:var(--muted)}
+  .tags{display:flex;flex-wrap:wrap;gap:4px}
+  .tag{background:#eef4ef;border:1px solid #b9c9bf;color:#1b2a23;padding:1px 6px;border-radius:999px;font-size:11px;font-weight:700}
+  .status-note{font-size:12px;color:#5a4632;margin-top:4px}
+
+  .actions{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid #ece6d8;margin:8px 0 6px;flex-wrap:wrap}
+  .action{background:#f6f2e8;color:#5a4632;border:1px solid var(--line);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:800}
+  .action:hover,.action.active{background:#e9e1cf;color:#2f271e}
+
+  .syn{color:#2a3a33;line-height:1.4;font-size:14px}
+
+  .toast{position:fixed;bottom:18px;right:18px;background:#3a3a3a;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;z-index:9999;max-width:70ch;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .toast.show{opacity:1;transform:translateY(0)}
+  .toast.error{background:#a64a4a}
+
+  .results-bar{display:flex;justify-content:space-between;align-items:center;margin:4px 0 8px;gap:8px;flex-wrap:nowrap}
+  .results-right{display:flex;gap:6px;align-items:center;white-space:nowrap}
+
+  /* Half-star widget */
+  .stars{position:relative;display:inline-block;font-size:18px;line-height:1}
+  .stars .bg{color:#ddd}
+  .stars .fg{position:absolute;left:0;top:0;white-space:nowrap;color:var(--gold);pointer-events:none;overflow:hidden}
+  .star-hit{position:absolute;top:0;left:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(10,1fr)}
+  .star-hit button{background:transparent;border:0;padding:0;margin:0;cursor:pointer}
+
+  #finish-modal{position:fixed;left:50%;top:20%;transform:translate(-50%,0);background:#2f2f2f;color:#fff;border-radius:10px;padding:14px;box-shadow:0 10px 24px rgba(0,0,0,.25);z-index:10000;display:none;max-width:520px}
+  #finish-modal.show{display:block}
+
+  @media(max-width:840px){
+    .search{grid-template-columns:1fr 1fr 1fr}
+  }
+  @media(max-width:640px){
+    .search{grid-template-columns:1fr}
+    .results-bar{flex-wrap:wrap;gap:6px}
+    .results-right{width:100%;justify-content:space-between}
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>PlotLine</h1>
+      <p>Your private reading feed</p>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats" id="stats">
+      <div class="stat"><strong id="total-books">0</strong> books</div>
+      <div class="stat" title="Finished"><strong id="books-read">0</strong> read</div>
+      <div class="stat"><strong id="read-month">0</strong> this month</div>
+      <div class="stat"><strong id="read-year">0</strong> this year</div>
+      <div class="stat"><strong id="avg-rating">0.0</strong> avg ★</div>
+    </div>
+
+    <main class="content">
+      <nav class="nav" id="main-nav">
+        <button class="nav-btn active" id="feed-btn" type="button">Library</button>
+        <button class="nav-btn" id="add-btn" type="button">Add Book</button>
+        <button class="nav-btn" id="my-books-btn" type="button">Lists</button>
+        <button class="nav-btn" id="prefs-btn" type="button">Goals & Backup</button>
+      </nav>
+
+      <section id="feed" class="section active">
+        <div class="search">
+          <input type="text" class="input" placeholder="Search title, author, tag…" id="search-input"/>
+          <select class="select" id="tag-filter"><option value="">All Tags</option></select>
+          <select class="select" id="category-filter"><option value="">All Categories</option></select>
+          <select class="select" id="min-rating"><option value="0">Min ★ (Any)</option><option value="5">5★</option><option value="4">4★+</option><option value="3">3★+</option></select>
+          <select class="select" id="sort-by"><option value="new">Newest</option><option value="rating">Highest Rated</option><option value="title">Title A–Z</option></select>
+        </div>
+
+        <div class="results-bar">
+          <span class="chip" id="result-count"></span>
+          <div class="results-right"><label class="chip"><input type="checkbox" id="collapse-all"> Collapse synopses</label></div>
+        </div>
+
+        <div id="books-feed" class="feed"></div>
+      </section>
+
+      <section id="add" class="section">
+        <div class="post">
+          <h3 style="margin-bottom:8px">Add a Book</h3>
+          <div class="search" style="grid-template-columns:2fr 1fr">
+            <div class="dropdown" style="position:relative">
+              <input id="book-search" class="input" type="text" placeholder="Search Google Books to auto-fill…"/>
+              <div id="book-results" class="post" style="position:absolute;left:0;right:0;max-height:280px;overflow:auto;z-index:40;display:none"></div>
+            </div>
+            <div>
+              <label class="chip" style="display:inline-block;margin-bottom:6px">Initial Rating (optional)</label>
+              <div class="stars" id="rating-stars" aria-label="rating stars">
+                <div class="bg">★★★★★</div>
+                <div class="fg" style="width:0%">★★★★★</div>
+                <div class="star-hit" id="rating-hit"></div>
+              </div>
+              <div id="rating-feedback" class="chip" style="margin-left:8px">Click stars (supports ½★)</div>
+            </div>
+          </div>
+
+          <form id="book-form">
+            <div class="search" style="grid-template-columns:1fr 1fr 1fr">
+              <div><label class="chip">Title *</label><input class="input" type="text" id="title" required/></div>
+              <div><label class="chip">Author *</label><input class="input" type="text" id="author" required/></div>
+              <div>
+                <label class="chip">Category</label>
+                <select class="select" id="genre"></select>
+              </div>
+            </div>
+
+            <div class="search" style="grid-template-columns:1fr 1fr">
+              <div><label class="chip">Cover Image (URL)</label><input class="input" type="url" id="book-image" placeholder="https://…"/></div>
+              <div><label class="chip">Tags</label>
+                <input type="text" class="input" id="tag-input" placeholder="Comma-separated (e.g., catholic, fiction)"/>
+              </div>
+            </div>
+
+            <div><label class="chip">Synopsis</label><textarea class="textarea" id="synopsis" placeholder="Book description…"></textarea></div>
+
+            <div class="search" style="grid-template-columns:1fr 1fr 1fr">
+              <div>
+                <label class="chip">Add to</label>
+                <select id="initial-status" class="select">
+                  <option value="wish">Want to Read</option>
+                  <option value="reading">Currently Reading</option>
+                  <option value="read">Already Read</option>
+                </select>
+              </div>
+              <div></div><div></div>
+            </div>
+
+            <div style="height:6px"></div>
+            <button type="submit" class="action">Save Book</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="my-books" class="section">
+        <h3 style="margin-bottom:8px">My Lists</h3>
+        <div class="post" style="margin-bottom:8px"><h4>Want to Read</h4><div id="wish-list"></div></div>
+        <div class="post" style="margin-bottom:8px"><h4>Currently Reading</h4><div id="current-reading"></div></div>
+        <div class="post"><h4>Read</h4><div id="read-list"></div></div>
+      </section>
+
+      <section id="prefs" class="section">
+        <h2 style="margin-bottom:8px;color:var(--ink);font-size:1.1rem">Goals & Backup</h2>
+
+        <div class="post" style="margin-bottom:10px">
+          <h3>Reading Goals</h3>
+          <div class="search" style="grid-template-columns:repeat(4,1fr)">
+            <div><label class="chip">Year</label><input id="goal-year" class="input" type="number"/></div>
+            <div><label class="chip">Total Books</label><input id="goal-total" class="input" type="number"/></div>
+            <div><label class="chip">Catholic</label><input id="goal-catholic" class="input" type="number"/></div>
+            <div><label class="chip">Fiction</label><input id="goal-fiction" class="input" type="number"/></div>
+          </div>
+          <div class="search" style="grid-template-columns:repeat(3,1fr)">
+            <div><label class="chip">Nonfiction</label><input id="goal-nonfiction" class="input" type="number"/></div>
+            <div></div><div></div>
+          </div>
+          <button id="save-goals" class="action" type="button">Save Goals</button>
+        </div>
+
+        <div class="post" style="margin-bottom:10px">
+          <h3>Export / Backup</h3>
+          <p class="chip" style="display:inline-block;margin-bottom:6px">Downloads CSV + JSON. (Cloud sync optional)</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="export-csv-btn" class="action" type="button">Download CSVs</button>
+            <button id="export-json-btn" class="action" type="button">Download JSON</button>
+            <label class="action" style="cursor:pointer">Import JSON<input type="file" id="import-json" accept="application/json" style="display:none"></label>
+          </div>
+        </div>
+
+        <div class="post">
+          <h3>Cloud Sync (JSONBin)</h3>
+          <p class="chip" id="sync-status">Idle</p>
+          <div class="search" style="grid-template-columns:2fr 2fr auto auto">
+            <input id="cloud-api" class="input" placeholder="X-Master-Key or Access Key"/>
+            <input id="cloud-bin" class="input" placeholder="Bin ID"/>
+            <button id="cloud-save" class="action" type="button">Save</button>
+            <button id="cloud-create" class="action" type="button">Create New Bin</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="cloud-pull" class="action" type="button">Pull</button>
+            <button id="cloud-push" class="action" type="button">Push</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <div id="finish-modal">
+    <div>
+      <h3 id="finish-heading" style="margin-bottom:6px">Rate this book</h3>
+      <p id="finish-title" class="chip" style="margin-bottom:6px"></p>
+      <div class="stars" id="finish-stars" style="margin:6px 0 4px">
+        <div class="bg">★★★★★</div>
+        <div class="fg" id="finish-fg" style="width:0%">★★★★★</div>
+        <div class="star-hit" id="finish-hit"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+        <button class="action" id="finish-save" type="button">Save</button>
+        <button class="action" id="finish-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ===== Helpers ===== */
+function rAll(str, search, replacement){ return String(str).split(search).join(replacement); }
+function escapeHtml(s){ s=String(s==null?'':s); s=rAll(s,'&','&amp;'); s=rAll(s,'<','&lt;'); s=rAll(s,'>','&gt;'); return s; }
+function escapeAttr(s){ return rAll(escapeHtml(s),'\"','&quot;'); }
+function nowISO(){ return new Date().toISOString(); }
+function formatDate(v){ var n=Number(v); var d=new Date(isFinite(n)?n:v); try{ return d.toLocaleDateString(); }catch(_e){ return d.toISOString().slice(0,10);} }
+function showToast(msg,isError){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.toggle('error',!!isError); t.classList.add('show'); clearTimeout(showToast._t); showToast._t=setTimeout(function(){ t.classList.remove('show'); }, isError?3200:1800); }
+function truncate(s,n){ s=String(s||''); n=n||300; return s.length>n? s.slice(0,n-1)+'…' : s; }
+
+/* ===== Storage / Cloud ===== */
+const JSONBIN_API = 'https://api.jsonbin.io/v3';
+let BIN_ID = localStorage.getItem('68b3cb8dd0ea881f406ca19e') || '';
+let API_KEY = localStorage.getItem('$2a$10$iBSfMhVt0mOYgC1uNUPBkuxj6plaS6MOuzL4JPvYzPWsVhJSroRTa') || '';
+
+let books = [];
+let sitePrefs = { goals: { year: new Date().getFullYear(), total: 0, byTag: { catholic:0, fiction:0, nonfiction:0 } } };
+
+// Unified headers: accept Master OR Access key, avoid returning metadata
+function jbHeaders(){ return { 'Content-Type':'application/json', 'X-Master-Key': API_KEY, 'X-Access-Key': API_KEY, 'X-Bin-Meta': 'false', 'Accept':'application/json' }; }
+// Namespace helper: prefer record.plotline if present
+function ns(record){ return (record && record.plotline) ? record.plotline : record; }
+
+/* ===== Storage / Cloud (Book Club–style auto sync) ===== */
+const JSONBIN_API = 'https://api.jsonbin.io/v3';
+const BIN_ID = '68b3cb8dd0ea881f406ca19e';
+const API_KEY = '$2a$10$iBSfMhVt0mOYgC1uNUPBkuxj6plaS6MOuzL4JPvYzPWsVhJSroRTa';
+
+let books = [];
+let sitePrefs = { goals: { year: new Date().getFullYear(), total: 0, byTag: { catholic:0, fiction:0, nonfiction:0 } } };
+
+/** Auto-pull like Book Club: load local first, then try remote (if configured). */
+async function loadAll(){
+  // 1) Local cache
+  try{
+    const cached = JSON.parse(localStorage.getItem('plotline_payload')||'{}');
+    if (cached.books) books = cached.books;
+    if (cached.sitePrefs) sitePrefs = cached.sitePrefs;
+  }catch(_e){}
+
+  // 2) Remote (only if key+bin are set)
+  if (!API_KEY || !BIN_ID) return; // UI still works locally until user saves creds
+
+  try{
+    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': API_KEY }
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    const record = data.record || {};
+    const scoped = ns(record);
+    // Prefer namespaced payload; fall back to root fields if present
+    books = Array.isArray(scoped?.books) ? scoped.books : (record.books || books || []);
+    sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs || {});
+    // Re-cache locally
+    localStorage.setItem('plotline_payload', JSON.stringify({ books, sitePrefs }));
+  }catch(e){
+    console.warn('Using local data; JSONBin sync failed:', e);
+  }
+}
+
+/** Auto-push like Book Club: always cache locally, then PUT to JSONBin when configured. */
+async function saveAll(){
+  // 1) Local cache
+  try{
+    localStorage.setItem('plotline_payload', JSON.stringify({ books, sitePrefs }));
+  }catch(_e){}
+
+  // 2) Remote (only if key+bin are set)
+  if (!API_KEY || !BIN_ID) return;
+
+  try{
+    // Merge with whatever else might live in the same bin (don’t clobber other apps)
+    let record = {};
+    try{
+      const latest = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, {
+        headers: { 'X-Master-Key': API_KEY }
+      });
+      if (latest.ok){
+        const j = await latest.json();
+        record = j.record || {};
+      }
+    }catch(_e){}
+
+    record.plotline = { books, sitePrefs };
+
+    await fetch(`${JSONBIN_API}/b/${BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': API_KEY
+      },
+      body: JSON.stringify(record)
+    });
+  }catch(e){
+    console.warn('Remote save failed:', e);
+  }
+}
+  
+async function loadAll(){
+  try{
+    var cached = JSON.parse(localStorage.getItem('plotline_payload')||'{}');
+    if(cached.books) books = cached.books;
+    if(cached.sitePrefs) sitePrefs = cached.sitePrefs;
+  }catch(_e){}
+  // Optional cloud pull on first run if configured
+}
+async function saveAll(){
+  try{ localStorage.setItem('plotline_payload', JSON.stringify({books,sitePrefs})); }catch(_e){}
+}
+
+async function cloudPull(){
+  try{
+    if(!API_KEY || !BIN_ID){ document.getElementById('sync-status').textContent = 'Set API key & bin first'; return; }
+    document.getElementById('sync-status').textContent = 'Pulling…';
+    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`,{headers: jbHeaders()});
+    if(!r.ok) throw new Error(await r.text());
+    const data=await r.json();
+    const record=data.record||{};
+    const scoped = ns(record);
+    books = (scoped && Array.isArray(scoped.books)) ? scoped.books : (record.books || []);
+    sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs);
+    await saveAll();
+    applyFilters(); renderMyLists(); updateStats();
+    document.getElementById('sync-status').textContent = 'Pulled';
+    showToast('Cloud pulled');
+  }catch(e){ console.warn(e); document.getElementById('sync-status').textContent='Pull failed'; showToast('Pull failed',true); }
+}
+async function cloudPush(){
+  try{
+    if(!API_KEY || !BIN_ID){ document.getElementById('sync-status').textContent = 'Set API key & bin first'; return; }
+    document.getElementById('sync-status').textContent = 'Pushing…';
+    // Merge with whatever's already in the bin so other apps aren't touched
+    const latest = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, { headers: jbHeaders() });
+    let record = latest.ok ? ((await latest.json()).record || {}) : {};
+    record.plotline = { books, sitePrefs };
+    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}`,{
+      method:'PUT', headers: jbHeaders(), body: JSON.stringify(record)
+    });
+    if(!r.ok) throw new Error(await r.text());
+    document.getElementById('sync-status').textContent='Pushed';
+    showToast('Cloud pushed');
+  }catch(e){ console.warn(e); document.getElementById('sync-status').textContent='Push failed'; showToast('Push failed',true); }
+}
+async function cloudCreate(){
+  try{
+    if(!API_KEY){ showToast('Enter API key first',true); return; }
+    document.getElementById('sync-status').textContent = 'Creating…';
+    const initial = { plotline: { books, sitePrefs } };
+    const r=await fetch(`${JSONBIN_API}/b`,{method:'POST',headers: jbHeaders(),body:JSON.stringify(initial)});
+    if(!r.ok) throw new Error(await r.text());
+    const data=await r.json();
+    const newId=(data.metadata && data.metadata.id)||data.id;
+    if(!newId) throw new Error('No Bin ID');
+    BIN_ID=newId; localStorage.setItem('plotline_bin',BIN_ID);
+    updateCloudInputsUI();
+    document.getElementById('sync-status').textContent='New bin created';
+    showToast('New JSONBin created');
+  }catch(e){ console.warn(e); document.getElementById('sync-status').textContent='Create failed'; showToast('Create failed',true); }
+}
+function updateCloudInputsUI(){
+  const api=document.getElementById('cloud-api'); const bin=document.getElementById('cloud-bin');
+  if(api) api.value = API_KEY || '';
+  if(bin) bin.value = BIN_ID || '';
+}
+
+/* ===== Data Model Helpers ===== */
+function newBook(obj){
+  const id=Date.now();
+  const b={
+    id,
+    title: (obj.title||'').trim(),
+    author:(obj.author||'').trim(),
+    image: (obj.image||'').trim(),
+    synopsis: (obj.synopsis||'').trim(),
+    genre: (obj.genre||'other').toLowerCase(),
+    tags: Array.isArray(obj.tags)? obj.tags.slice(0,12).map(t=>String(t).toLowerCase().trim()).filter(Boolean) : [],
+    addedAt: nowISO(),
+    status: obj.status||'wish',
+    sessions: [],      // {startedAt, finishedAt, rating}
+    rating: 0          // latest rating (float .5 steps)
+  };
+  if(b.status==='wish') b.wantAt=nowISO();
+  if(b.status==='reading') { b.wantAt=b.wantAt||nowISO(); startReading(b); }
+  if(b.status==='read') { b.wantAt=b.wantAt||nowISO(); startReading(b); finishReading(b, obj.rating||0); }
+  return b;
+}
+function startReading(b){
+  if(!b.sessions) b.sessions=[];
+  const open=b.sessions.find(s=>!s.finishedAt);
+  if(open) return; // already reading
+  b.sessions.push({startedAt: nowISO()});
+  b.status='reading'; b.startAt = b.sessions[b.sessions.length-1].startedAt;
+}
+function finishReading(b, rating){
+  if(!b.sessions || !b.sessions.length) startReading(b);
+  const cur=b.sessions[b.sessions.length-1];
+  if(!cur.finishedAt) cur.finishedAt=nowISO();
+  if(isFinite(rating) && rating>0){ cur.rating = rating; b.rating = rating; }
+  b.status='read'; b.finishAt = cur.finishedAt;
+}
+function setWish(b){ b.status='wish'; b.wantAt = b.wantAt || nowISO(); }
+function goodreadsUrl(book){ var q=((book.title||'')+' '+(book.author||'')).trim(); return 'https://www.goodreads.com/search?q='+encodeURIComponent(q)+'&search_type=books'; }
+
+/* ===== Rendering ===== */
+function starWidthFromRating(r){ // 0..5 -> 0..100%
+  r = Math.max(0, Math.min(5, Number(r)||0));
+  return (r/5*100).toFixed(0)+'%';
+}
+function starWidgetHTML(widthPct){
+  return '<div class="stars"><div class="bg">★★★★★</div><div class="fg" style="width:'+escapeAttr(widthPct)+'">★★★★★</div></div>';
+}
+function youStatusLine(b){
+  if(b.status==='read'){
+    const r=b.rating?` — ${b.rating.toFixed(1)}★`:'';
+    return `<div class="status-note"><strong>You</strong> finished on ${formatDate(b.finishAt)}${r}</div>`;
+  }
+  if(b.status==='reading') return `<div class="status-note"><strong>You</strong> started on ${formatDate(b.startAt)}</div>`;
+  if(b.status==='wish') return `<div class="status-note"><strong>You</strong> want to read (added ${formatDate(b.wantAt)})</div>`;
+  return '';
+}
+function synBlock(book){
+  if(!book.synopsis) return '';
+  const long = book.synopsis.length>280; const short = truncate(book.synopsis,280);
+  return [
+    '<div class="syn" data-syn="'+book.id+'">',
+    '  <span class="syn-text" data-expanded="false">'+escapeHtml(short)+'</span>',
+    long?(' <button class="action" type="button" data-action="toggle-synopsis" data-id="'+book.id+'">Read more</button>'):'',
+    '</div>'
+  ].join('');
+}
+function tagChips(tags){ if(!tags||!tags.length) return ''; return '<div class="tags">'+tags.map(t=>'
+<span class="tag">'+escapeHtml(t)+'</span>').join('')+'</div>'; }
+function bookCoverBlock(book){ var link=goodreadsUrl(book); if(book.image){ return '<a href="'+link+'" target="_blank" rel="noopener noreferrer"><img class="cover" loading="lazy" alt="Cover of '+escapeHtml(book.title)+'" src="'+escapeAttr(book.image)+'"/></a>'; } return '<a href="'+link+'" target="_blank" rel="noopener noreferrer" class="cover-ph">No Cover</a>'; }
+
+function bookCard(book){
+  const width=starWidthFromRating(book.rating||0);
+  const collapsed = (document.getElementById('collapse-all') && document.getElementById('collapse-all').checked);
+  return [
+    '<article class="post" id="book-'+book.id+'" data-id="'+book.id+'">',
+    '  <div class="head">',
+    '    '+bookCoverBlock(book),
+    '    <div class="info">',
+    '      <div class="genre">'+escapeHtml(book.genre||'other')+'</div>',
+    '      <div class="title">'+escapeHtml(book.title)+'</div>',
+    '      <div class="author">by '+escapeHtml(book.author)+'</div>',
+    '      <div class="rating-line">'+starWidgetHTML(width)+'<span class="chip">'+(book.rating? (Number(book.rating).toFixed(1)+'★') : 'No rating')+'</span></div>',
+    tagChips(book.tags),
+    youStatusLine(book),
+    '    </div>',
+    '  </div>',
+    collapsed? '' : synBlock(book),
+    '  <div class="actions">',
+    '    <button class="action" type="button" data-action="wish" data-id="'+book.id+'">📚 Want to Read</button>',
+    '    <button class="action" type="button" data-action="reading" data-id="'+book.id+'">📖 Start / Currently Reading</button>',
+    '    <button class="action" type="button" data-action="finish" data-id="'+book.id+'">✅ Finish & Rate</button>',
+    '    <button class="action" type="button" data-action="edit" data-id="'+book.id+'">✏️ Edit</button>',
+    '    <button class="action" type="button" data-action="delete" data-id="'+book.id+'">🗑️ Delete</button>',
+    '  </div>',
+    '</article>'
+  ].join('');
+}
+
+let currentBooks=[];
+function renderBooks(){
+  const c=document.getElementById('books-feed');
+  if(!currentBooks.length){ c.innerHTML='<div style="text-align:center;padding:28px;color:#6a5d50"><h3 style="font-size:1rem">No books found</h3><p class="chip">Add a book or adjust filters.</p></div>'; document.getElementById('result-count').textContent='0 results'; return; }
+  c.innerHTML=currentBooks.map(bookCard).join('');
+  document.getElementById('result-count').textContent=String(currentBooks.length)+' result'+(currentBooks.length===1?'':'s');
+}
+function renderMyLists(){
+  function make(arr,actions){
+    return arr.length?arr.map(b=>`<div class="head" data-id="${b.id}" style="justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0"><div><strong>${escapeHtml(b.title)}</strong> by ${escapeHtml(b.author)}</div><div>${actions(b)}</div></div>`).join(''):'<p class="chip" style="font-style:italic">Nothing here yet</p>';
+  }
+  const wish = books.filter(b=>b.status==='wish');
+  const reading = books.filter(b=>b.status==='reading');
+  const read = books.filter(b=>b.status==='read');
+  document.getElementById('wish-list').innerHTML=make(wish,b=>`<button class="action" type="button" data-action="reading" data-id="${b.id}">Start</button> <button class="action" type="button" data-action="delete" data-id="${b.id}">Delete</button>`);
+  document.getElementById('current-reading').innerHTML=make(reading,b=>`<button class="action" type="button" data-action="finish" data-id="${b.id}">Finish</button> <button class="action" type="button" data-action="wish" data-id="${b.id}">Move to Wish</button>`);
+  document.getElementById('read-list').innerHTML=make(read,b=>`<span class="chip">${(b.rating||0).toFixed(1)}★</span> <button class="action" type="button" data-action="reading" data-id="${b.id}">Re-read</button>`);
+}
+
+/* ===== Stats ===== */
+function monthYearCounts(){
+  const now=new Date(); const y=now.getFullYear(); const m=now.getMonth();
+  let month=0, year=0; let sum=0, n=0;
+  books.forEach(b=>{
+    (b.sessions||[]).forEach(s=>{
+      if(s.finishedAt){ const d=new Date(s.finishedAt); if(d.getFullYear()===y){ year++; if(d.getMonth()===m) month++; if(typeof s.rating==='number'){ sum+=s.rating; n++; } }
+      }
+    });
+  });
+  const totalRead=books.filter(b=>b.status==='read').length;
+  const avg = n? (sum/n) : 0;
+  document.getElementById('books-read').textContent=String(totalRead);
+  document.getElementById('read-month').textContent=String(month);
+  document.getElementById('read-year').textContent=String(year);
+  document.getElementById('avg-rating').textContent=avg.toFixed(1);
+  document.getElementById('total-books').textContent=String(books.length);
+}
+function updateStats(){ monthYearCounts(); }
+
+/* ===== Filters / Search ===== */
+function populateCategoryOptions(){
+  var opts=[
+    'Fiction','Non-Fiction','Biography','Memoir','Self-Help','Professional','Business',
+    'Leadership','Entrepreneurship','Marketing','Finance','Personal Development',
+    'History','Science','Technology','Psychology','Philosophy','Spirituality/Religion',
+    'Health & Fitness','Cooking','Travel','Parenting','Education',
+    'Mystery','Thriller','Horror','Romance','Fantasy','Sci-Fi','Dystopian','Young Adult',
+    'Classics','Literary Fiction','Poetry','Comics/Graphic Novel','Reference','Other'
+  ];
+  document.getElementById('genre').innerHTML=opts.map(o=>'<option value="'+escapeAttr(o.toLowerCase())+'">'+escapeHtml(o)+'</option>').join('');
+  var feedCat=document.getElementById('category-filter');
+  feedCat.innerHTML=['<option value="">All Categories</option>'].concat(opts.map(o=>'<option value="'+escapeAttr(o.toLowerCase())+'">'+escapeHtml(o)+'</option>')).join('');
+}
+function getAllTagsUnique(){
+  var set={}; books.forEach(b=>{ (b.tags||[]).forEach(t=>{ set[String(t).toLowerCase()]=1; }); });
+  return Object.keys(set).sort();
+}
+function populateTagFilter(){
+  var sel=document.getElementById('tag-filter'); if(!sel) return;
+  var cur=sel.value; var all=getAllTagsUnique();
+  sel.innerHTML=['<option value="">All Tags</option>'].concat(all.map(t=>'<option value="'+escapeAttr(t)+'">'+escapeHtml(t)+'</option>')).join('');
+  if(all.indexOf(cur)>-1) sel.value=cur;
+}
+function bookSearchScore(b,t){ if(!t) return 1; var term=String(t).toLowerCase(); function inStr(s){ return String(s||'').toLowerCase(); } var score=0; var title=inStr(b.title), author=inStr(b.author), syn=inStr(b.synopsis); var tags=(b.tags||[]).map(x=>String(x).toLowerCase()); if(title===term) score+=100; if(title.indexOf(term)===0) score+=60; if(title.indexOf(term)>-1) score+=30; if(author.indexOf(term)===0) score+=30; if(author.indexOf(term)>-1) score+=20; if(syn.indexOf(term)>-1) score+=12; if(tags.some(x=>x.indexOf(term)>-1)) score+=25; return score; }
+function applyFilters(){
+  var term=document.getElementById('search-input').value.trim();
+  var tagTerm=document.getElementById('tag-filter').value.trim().toLowerCase();
+  var cat=document.getElementById('category-filter').value;
+  var min=parseInt(document.getElementById('min-rating').value,10)||0;
+  var sort=document.getElementById('sort-by').value;
+
+  var list=books
+    .map(function(b){ var o={}; for(var k in b) o[k]=b[k]; o._score=bookSearchScore(b,term); return o; })
+    .filter(function(b){ if(term && b._score<=0) return false; if(cat && b.genre!==cat) return false; if(min && (Number(b.rating)||0) < min) return false; if(tagTerm && (b.tags||[]).map(t=>String(t).toLowerCase()).indexOf(tagTerm)===-1) return false; return true; });
+
+  if(term){ list.sort((a,b)=> (b._score-a._score) || (b.id-a.id)); }
+  else if(sort==='new'){ list.sort((a,b)=> b.id-a.id); }
+  else if(sort==='rating'){ list.sort((a,b)=> (Number(b.rating)||0)-(Number(a.rating)||0)); }
+  else if(sort==='title'){ list.sort((a,b)=> a.title.localeCompare(b.title)); }
+
+  currentBooks=list; renderBooks();
+}
+
+/* ===== Google Books Search ===== */
+let lastSearchItems=[];
+const searchGoogleBooks=async function(q){
+  var box=document.getElementById('book-results'); var input=document.getElementById('book-search');
+  if(!q||q.trim().length<2){ box.style.display='none'; box.innerHTML=''; lastSearchItems=[]; return; }
+  try{
+    input.classList.add('loading');
+    const url='https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(q.trim())+'&maxResults=10';
+    const r=await fetch(url); if(!r.ok) throw new Error('Search failed '+r.status);
+    const data=await r.json(); input.classList.remove('loading');
+    lastSearchItems=(data.items||[]).map(function(it,i){ var v=it.volumeInfo||{}; return { index:i, title:v.title||'Unknown Title', authors:(v.authors||[]).join(', ')||'Unknown Author', cover:(v.imageLinks&&v.imageLinks.thumbnail)||'', description:v.description||'', categories:v.categories||[] }; });
+    if(!lastSearchItems.length){ box.innerHTML='<div class="chip" style="padding:8px">No results</div>'; box.style.display='block'; return; }
+    box.innerHTML=lastSearchItems.map(function(r){ return '<div class="head" data-pick="'+r.index+'" style="justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0"><div style="display:flex;gap:8px;align-items:center>'+(r.cover?('<img src="'+escapeAttr(r.cover)+'" style="width:24px;height:36px;border-radius:4px;border:1px solid #e6ece8;object-fit:cover">'):'<div style="width:24px;height:36px;border-radius:4px;background:#e9ecef"></div>')+'<div><strong>'+escapeHtml(r.title)+'</strong><div class="chip" style="margin-top:2px">'+escapeHtml(r.authors)+'</div></div></div>'+( (r.categories&&r.categories.length)?('<span class="chip">'+escapeHtml(r.categories[0])+'</span>') : '' )+'</div>'; }).join('');
+    box.style.display='block';
+  }catch(e){ input.classList.remove('loading'); console.warn(e); box.innerHTML='<div class="chip" style="padding:8px;color:#b74a4a">Search failed. Try again.</div>'; box.style.display='block'; }
+};
+
+/* ===== Export / Import ===== */
+function download(name, text, mime){ mime=mime||'text/csv;charset=utf-8;'; var blob=new Blob([text],{type:mime}); var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); URL.revokeObjectURL(url); a.remove(); }
+function toCsvRow(arr){ function escCsvStr(s){ return String(s==null?'':s).replace(/"/g,'""'); } return arr.map(v=>'"'+escCsvStr(v)+'"').join(','); }
+function exportCsvs(){
+  var booksHeader = toCsvRow(['id','title','author','genre','image','rating','tags','synopsis','status','wantAt','startAt','finishAt']);
+  var booksRows = books.map(function(b){return toCsvRow([b.id,b.title,b.author,b.genre,b.image||'',(b.rating||0).toFixed(1),(b.tags||[]).join('|'),(b.synopsis||''),b.status||'',b.wantAt||'',b.startAt||'',b.finishAt||'']);});
+  download('books.csv',[booksHeader].concat(booksRows).join('
+'));
+  download('plotline-export.json',JSON.stringify({books,sitePrefs},null,2),'application/json');
+}
+function exportJson(){ download('plotline-export.json',JSON.stringify({books,sitePrefs},null,2),'application/json'); }
+function importJson(file){ var fr=new FileReader(); fr.onload=function(){ try{ var data=JSON.parse(fr.result); if(data.books) books=data.books; if(data.sitePrefs) sitePrefs=data.sitePrefs; saveAll(); populateTagFilter(); applyFilters(); renderMyLists(); updateStats(); showToast('Import complete'); }catch(e){ showToast('Invalid JSON',true); } }; fr.readAsText(file); }
+
+/* ===== Modal / Rating (half-star) ===== */
+let ratingDraft = 0; let finishContext=null;
+function bindStarHit(elFg, elHit, feedbackEl){
+  function setFromIndex(i){ // i = 0..9 -> rating in 0.5 steps
+    const r = (i+1)/2; ratingDraft = r; elFg.style.width = starWidthFromRating(r); if(feedbackEl) feedbackEl.textContent = r.toFixed(1)+'★'; }
+  elHit.innerHTML = Array.from({length:10},(_,i)=>`<button type="button" data-i="${i}"></button>`).join('');
+  elHit.addEventListener('click', function(e){ var btn=e.target.closest('button'); if(!btn) return; var i=Number(btn.getAttribute('data-i')); setFromIndex(i); });
+}
+function openFinishModal(book){ finishContext = {bookId: book.id}; document.getElementById('finish-title').textContent = book.title+' — '+book.author; var fg=document.getElementById('finish-fg'); var hit=document.getElementById('finish-hit'); bindStarHit(fg,hit,null); ratingDraft = book.rating||0; fg.style.width=starWidthFromRating(ratingDraft); document.getElementById('finish-modal').classList.add('show'); }
+function closeFinishModal(){ document.getElementById('finish-modal').classList.remove('show'); finishContext=null; }
+
+/* ===== Boot / Events ===== */
+document.addEventListener('DOMContentLoaded', async function(){
+  // Basic setup
+  (function setupPWA(){ try{ const manifest={name:'PlotLine',short_name:'PlotLine',start_url:'.',display:'standalone',background_color:'#ffffff',theme_color:'#2f4a3e',icons:[{src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAAAAABQFZ1hAAAAC0lEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAB4p1nNAAE=',sizes:'192x192',type:'image/png'}]}; const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'}); const url=URL.createObjectURL(blob); const link=document.getElementById('app-manifest'); if(link) link.href=url; if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){ const sw="self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open('pl-v1').then(c=>c.addAll(['./'])))});self.addEventListener('activate',e=>self.clients.claim());self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})"; const swUrl=URL.createObjectURL(new Blob([sw],{type:'text/javascript'})); navigator.serviceWorker.register(swUrl).catch(function(){}); } }catch(_e){} })();
+
+  await loadAll();
+  populateCategoryOptions();
+  populateTagFilter();
+  applyFilters();
+  renderMyLists();
+  updateStats();
+  updateCloudInputsUI();
+
+  // Nav
+  document.getElementById('feed-btn').addEventListener('click', function(){ openSection('feed'); applyFilters(); });
+  document.getElementById('add-btn').addEventListener('click', function(){ openSection('add'); });
+  document.getElementById('my-books-btn').addEventListener('click', function(){ openSection('my-books'); renderMyLists(); });
+  document.getElementById('prefs-btn').addEventListener('click', function(){ openSection('prefs'); });
+
+  // Filters
+  document.getElementById('search-input').addEventListener('input', applyFilters);
+  document.getElementById('tag-filter').addEventListener('change', applyFilters);
+  document.getElementById('category-filter').addEventListener('change', applyFilters);
+  document.getElementById('min-rating').addEventListener('change', applyFilters);
+  document.getElementById('sort-by').addEventListener('change', applyFilters);
+  document.getElementById('collapse-all').addEventListener('change', renderBooks);
+
+  // Google Books
+  let debounceT=null; document.getElementById('book-search').addEventListener('input',function(e){ clearTimeout(debounceT); debounceT=setTimeout(function(){searchGoogleBooks(e.target.value);},300); });
+  document.addEventListener('click',function(e){ var pick=e.target.closest && e.target.closest('[data-pick]'); if(pick){ var i=Number(pick.getAttribute('data-pick')); var it=lastSearchItems[i]; if(!it) return; document.getElementById('title').value=it.title; document.getElementById('author').value=it.authors; document.getElementById('book-image').value=it.cover||''; document.getElementById('synopsis').value=it.description||''; var t=it.categories||[]; document.getElementById('tag-input').value = t.join(', '); document.getElementById('book-results').style.display='none'; }});
+  var bs=document.getElementById('book-search'); if(bs){ bs.addEventListener('keydown',function(e){ if((e.key||'')==='Enter'){ e.preventDefault(); }}); }
+
+  // Add form rating widget
+  (function initAddRating(){ var fg=document.querySelector('#rating-stars .fg'); var hit=document.getElementById('rating-hit'); bindStarHit(fg,hit,document.getElementById('rating-feedback')); })();
+
+  // Add book form
+  document.getElementById('book-form').addEventListener('submit', function(e){ e.preventDefault(); var title=document.getElementById('title').value.trim(), author=document.getElementById('author').value.trim(); if(!title||!author){ showToast('Title and author are required.',true); return; } var genre=document.getElementById('genre').value; var image=document.getElementById('book-image').value.trim(); var synopsis=document.getElementById('synopsis').value.trim(); var tags=(document.getElementById('tag-input').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean); var status=document.getElementById('initial-status').value; var b=newBook({title,author,genre,image,synopsis,tags,status,rating:ratingDraft}); if(ratingDraft>0 && status==='read'){ b.rating=ratingDraft; if(b.sessions.length){ b.sessions[b.sessions.length-1].rating=ratingDraft; } } books.unshift(b); saveAll(); populateTagFilter(); applyFilters(); renderMyLists(); updateStats(); this.reset(); ratingDraft=0; document.querySelector('#rating-stars .fg').style.width='0%'; document.getElementById('rating-feedback').textContent='Click stars (supports ½★)'; showToast('Book saved'); });
+
+  // Lists and feed actions (event delegation)
+  document.addEventListener('click',function(e){ var btn=e.target.closest && e.target.closest('[data-action]'); if(!btn) return; var action=btn.getAttribute('data-action'); var bookId=btn.getAttribute('data-id'); function findBook(id){ return books.find(x=>String(x.id)===String(id)); }
+    if(action==='toggle-synopsis'){ var id=bookId; var wrap=document.querySelector('.syn[data-syn="'+id+'"]'); if(!wrap) return; var span=wrap.querySelector('.syn-text'); if(!span) return; var expanded=span.getAttribute('data-expanded')==='true'; var full=(findBook(id).synopsis||''); if(expanded){ span.textContent=(full.length>280? full.slice(0,279)+'…' : full); span.setAttribute('data-expanded','false'); btn.textContent='Read more'; }else{ span.textContent=full; span.setAttribute('data-expanded','true'); btn.textContent='Show less'; } return; }
+    if(action==='wish'){ var b=findBook(bookId); if(!b) return; setWish(b); saveAll(); applyFilters(); renderMyLists(); updateStats(); showToast('Moved to Want to Read'); return; }
+    if(action==='reading'){ var b2=findBook(bookId); if(!b2) return; startReading(b2); saveAll(); applyFilters(); renderMyLists(); updateStats(); showToast('Marked as Currently Reading'); return; }
+    if(action==='finish'){ var b3=findBook(bookId); if(!b3) return; openFinishModal(b3); return; }
+    if(action==='edit'){ var b4=findBook(bookId); if(!b4) return; var t=prompt('Edit title:', b4.title); if(t==null) return; b4.title=t.trim()||b4.title; var a=prompt('Edit author:', b4.author); if(a==null) return; b4.author=a.trim()||b4.author; saveAll(); applyFilters(); renderMyLists(); updateStats(); return; }
+    if(action==='delete'){ if(!confirm('Delete this book?')) return; books = books.filter(x=>String(x.id)!==String(bookId)); saveAll(); applyFilters(); renderMyLists(); updateStats(); showToast('Deleted'); return; }
+  });
+
+  // Finish modal
+  document.getElementById('finish-save').addEventListener('click', function(){ try{ if(!finishContext){ closeFinishModal(); return; } var book=books.find(b=>b.id===finishContext.bookId); if(!book){ closeFinishModal(); return; } finishReading(book, ratingDraft||book.rating||0); saveAll(); closeFinishModal(); renderMyLists(); applyFilters(); updateStats(); showToast('Marked as read!'); }catch(e){ console.warn(e); closeFinishModal(); showToast('Saved locally. If something looks off, refresh.',true); } });
+  document.getElementById('finish-cancel').addEventListener('click', closeFinishModal);
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && document.getElementById('finish-modal').classList.contains('show')) closeFinishModal(); });
+  document.addEventListener('click',function(e){ var m=document.getElementById('finish-modal'); if(!m || !m.classList.contains('show')) return; if(!m.contains(e.target)) closeFinishModal(); });
+
+  // Goals
+  function loadGoalsUI(){ var g=sitePrefs.goals||{year:new Date().getFullYear(), total:0, byTag:{}}; document.getElementById('goal-year').value=g.year||new Date().getFullYear(); document.getElementById('goal-total').value=g.total||0; document.getElementById('goal-catholic').value=(g.byTag&&g.byTag.catholic)||0; document.getElementById('goal-fiction').value=(g.byTag&&g.byTag.fiction)||0; document.getElementById('goal-nonfiction').value=(g.byTag&&g.byTag.nonfiction)||0; }
+  loadGoalsUI();
+  document.getElementById('save-goals').addEventListener('click', function(){ var g=sitePrefs.goals||{}; g.year=parseInt(document.getElementById('goal-year').value,10)||new Date().getFullYear(); g.total=parseInt(document.getElementById('goal-total').value,10)||0; g.byTag=g.byTag||{}; g.byTag.catholic=parseInt(document.getElementById('goal-catholic').value,10)||0; g.byTag.fiction=parseInt(document.getElementById('goal-fiction').value,10)||0; g.byTag.nonfiction=parseInt(document.getElementById('goal-nonfiction').value,10)||0; sitePrefs.goals=g; saveAll(); showToast('Goals saved'); });
+
+  // Export/Import
+  document.getElementById('export-csv-btn').addEventListener('click', exportCsvs);
+  document.getElementById('export-json-btn').addEventListener('click', exportJson);
+  document.getElementById('import-json').addEventListener('change', function(e){ var f=e.target.files && e.target.files[0]; if(f) importJson(f); e.target.value=''; });
+
+
+
+function openSection(id){ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); if(id==='feed') document.getElementById('feed-btn').classList.add('active'); if(id==='add') document.getElementById('add-btn').classList.add('active'); if(id==='my-books') document.getElementById('my-books-btn').classList.add('active'); if(id==='prefs') document.getElementById('prefs-btn').classList.add('active'); }
+</script>
+</body>
+</html>
+
+
+
