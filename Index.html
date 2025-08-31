@@ -235,7 +235,7 @@
           <h3>Cloud Sync (JSONBin)</h3>
           <p class="chip" id="sync-status">Idle</p>
           <div class="search" style="grid-template-columns:2fr 2fr auto auto">
-            <input id="cloud-api" class="input" placeholder="X-Master-Key"/>
+            <input id="cloud-api" class="input" placeholder="X-Master-Key or Access Key"/>
             <input id="cloud-bin" class="input" placeholder="Bin ID"/>
             <button id="cloud-save" class="action" type="button">Save</button>
             <button id="cloud-create" class="action" type="button">Create New Bin</button>
@@ -279,14 +279,16 @@ function truncate(s,n){ s=String(s||''); n=n||300; return s.length>n? s.slice(0,
 
 /* ===== Storage / Cloud ===== */
 const JSONBIN_API = 'https://api.jsonbin.io/v3';
-let BIN_ID = localStorage.getItem('68b3cb8dd0ea881f406ca19e') || '';
-let API_KEY = localStorage.getItem('$2a$10$1k.Aw1WU5YTjSlKmSLGQ3eK6gaEhRB/j.FzTEtMp7Ardqd7vI4i4C') || '';
+let BIN_ID = localStorage.getItem('plotline_bin') || '';
+let API_KEY = localStorage.getItem('plotline_key') || '';
 
 let books = [];
 let sitePrefs = { goals: { year: new Date().getFullYear(), total: 0, byTag: { catholic:0, fiction:0, nonfiction:0 } } };
-  function jbHeaders(){ return {'Content-Type':'application/json','X-Master-Key':API_KEY,'X-Access-Key':API_KEY,'X-Bin-Meta':'false','Accept':'application/json'}; }
-function ns(record){ return (record && record.plotline) ? record.plotline : record; }
 
+// Unified headers: accept Master OR Access key, avoid returning metadata
+function jbHeaders(){ return { 'Content-Type':'application/json', 'X-Master-Key': API_KEY, 'X-Access-Key': API_KEY, 'X-Bin-Meta': 'false', 'Accept':'application/json' }; }
+// Namespace helper: prefer record.plotline if present
+function ns(record){ return (record && record.plotline) ? record.plotline : record; }
 
 async function loadAll(){
   try{
@@ -304,14 +306,13 @@ async function cloudPull(){
   try{
     if(!API_KEY || !BIN_ID){ document.getElementById('sync-status').textContent = 'Set API key & bin first'; return; }
     document.getElementById('sync-status').textContent = 'Pulling…';
-    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':API_KEY}});
+    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`,{headers: jbHeaders()});
     if(!r.ok) throw new Error(await r.text());
-const data=await r.json();
-const record=data.record||{};
-const scoped = ns(record);
-books = (scoped && Array.isArray(scoped.books)) ? scoped.books : (record.books || []);
-sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs);
-
+    const data=await r.json();
+    const record=data.record||{};
+    const scoped = ns(record);
+    books = (scoped && Array.isArray(scoped.books)) ? scoped.books : (record.books || []);
+    sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs);
     await saveAll();
     applyFilters(); renderMyLists(); updateStats();
     document.getElementById('sync-status').textContent = 'Pulled';
@@ -322,8 +323,13 @@ async function cloudPush(){
   try{
     if(!API_KEY || !BIN_ID){ document.getElementById('sync-status').textContent = 'Set API key & bin first'; return; }
     document.getElementById('sync-status').textContent = 'Pushing…';
-    const payload={books,sitePrefs};
-    const r=await fetch(`${JSONBIN_API}/b/${BIN_ID}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},body:JSON.stringify(payload)});
+    // Merge with whatever's already in the bin so other apps aren't touched
+    const latest = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, { headers: jbHeaders() });
+    let record = latest.ok ? ((await latest.json()).record || {}) : {};
+    record.plotline = { books, sitePrefs };
+    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}`,{
+      method:'PUT', headers: jbHeaders(), body: JSON.stringify(record)
+    });
     if(!r.ok) throw new Error(await r.text());
     document.getElementById('sync-status').textContent='Pushed';
     showToast('Cloud pushed');
@@ -333,8 +339,8 @@ async function cloudCreate(){
   try{
     if(!API_KEY){ showToast('Enter API key first',true); return; }
     document.getElementById('sync-status').textContent = 'Creating…';
-    const initial = { books, sitePrefs };
-    const r=await fetch(`${JSONBIN_API}/b`,{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':API_KEY},body:JSON.stringify(initial)});
+    const initial = { plotline: { books, sitePrefs } };
+    const r=await fetch(`${JSONBIN_API}/b`,{method:'POST',headers: jbHeaders(),body:JSON.stringify(initial)});
     if(!r.ok) throw new Error(await r.text());
     const data=await r.json();
     const newId=(data.metadata && data.metadata.id)||data.id;
@@ -416,7 +422,8 @@ function synBlock(book){
     '</div>'
   ].join('');
 }
-function tagChips(tags){ if(!tags||!tags.length) return ''; return '<div class="tags">'+tags.map(t=>'\n<span class="tag">'+escapeHtml(t)+'</span>').join('')+'</div>'; }
+function tagChips(tags){ if(!tags||!tags.length) return ''; return '<div class="tags">'+tags.map(t=>'
+<span class="tag">'+escapeHtml(t)+'</span>').join('')+'</div>'; }
 function bookCoverBlock(book){ var link=goodreadsUrl(book); if(book.image){ return '<a href="'+link+'" target="_blank" rel="noopener noreferrer"><img class="cover" loading="lazy" alt="Cover of '+escapeHtml(book.title)+'" src="'+escapeAttr(book.image)+'"/></a>'; } return '<a href="'+link+'" target="_blank" rel="noopener noreferrer" class="cover-ph">No Cover</a>'; }
 
 function bookCard(book){
@@ -542,7 +549,7 @@ const searchGoogleBooks=async function(q){
     const data=await r.json(); input.classList.remove('loading');
     lastSearchItems=(data.items||[]).map(function(it,i){ var v=it.volumeInfo||{}; return { index:i, title:v.title||'Unknown Title', authors:(v.authors||[]).join(', ')||'Unknown Author', cover:(v.imageLinks&&v.imageLinks.thumbnail)||'', description:v.description||'', categories:v.categories||[] }; });
     if(!lastSearchItems.length){ box.innerHTML='<div class="chip" style="padding:8px">No results</div>'; box.style.display='block'; return; }
-    box.innerHTML=lastSearchItems.map(function(r){ return '<div class="head" data-pick="'+r.index+'" style="justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0"><div style="display:flex;gap:8px;align-items:center">'+(r.cover?('<img src="'+escapeAttr(r.cover)+'" style="width:24px;height:36px;border-radius:4px;border:1px solid #e6ece8;object-fit:cover">'):'<div style="width:24px;height:36px;border-radius:4px;background:#e9ecef"></div>')+'<div><strong>'+escapeHtml(r.title)+'</strong><div class="chip" style="margin-top:2px">'+escapeHtml(r.authors)+'</div></div></div>'+( (r.categories&&r.categories.length)?('<span class="chip">'+escapeHtml(r.categories[0])+'</span>') : '' )+'</div>'; }).join('');
+    box.innerHTML=lastSearchItems.map(function(r){ return '<div class="head" data-pick="'+r.index+'" style="justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0"><div style="display:flex;gap:8px;align-items:center>'+(r.cover?('<img src="'+escapeAttr(r.cover)+'" style="width:24px;height:36px;border-radius:4px;border:1px solid #e6ece8;object-fit:cover">'):'<div style="width:24px;height:36px;border-radius:4px;background:#e9ecef"></div>')+'<div><strong>'+escapeHtml(r.title)+'</strong><div class="chip" style="margin-top:2px">'+escapeHtml(r.authors)+'</div></div></div>'+( (r.categories&&r.categories.length)?('<span class="chip">'+escapeHtml(r.categories[0])+'</span>') : '' )+'</div>'; }).join('');
     box.style.display='block';
   }catch(e){ input.classList.remove('loading'); console.warn(e); box.innerHTML='<div class="chip" style="padding:8px;color:#b74a4a">Search failed. Try again.</div>'; box.style.display='block'; }
 };
@@ -553,7 +560,8 @@ function toCsvRow(arr){ function escCsvStr(s){ return String(s==null?'':s).repla
 function exportCsvs(){
   var booksHeader = toCsvRow(['id','title','author','genre','image','rating','tags','synopsis','status','wantAt','startAt','finishAt']);
   var booksRows = books.map(function(b){return toCsvRow([b.id,b.title,b.author,b.genre,b.image||'',(b.rating||0).toFixed(1),(b.tags||[]).join('|'),(b.synopsis||''),b.status||'',b.wantAt||'',b.startAt||'',b.finishAt||'']);});
-  download('books.csv',[booksHeader].concat(booksRows).join('\n'));
+  download('books.csv',[booksHeader].concat(booksRows).join('
+'));
   download('plotline-export.json',JSON.stringify({books,sitePrefs},null,2),'application/json');
 }
 function exportJson(){ download('plotline-export.json',JSON.stringify({books,sitePrefs},null,2),'application/json'); }
@@ -645,7 +653,3 @@ function openSection(id){ document.querySelectorAll('.section').forEach(s=>s.cla
 </script>
 </body>
 </html>
-
-
-
-
