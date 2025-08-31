@@ -116,27 +116,12 @@
     </div>
 
     <!-- OPTIONAL: simple user bar like Book Club -->
-    <div id="user-bar" class="user-bar">
-      <span>Welcome, <strong id="current-user-name"></strong>!</span>
-      <button class="pill-btn" id="logout-btn" type="button">Switch User</button>
-    </div>
+
 
     <!-- Login section (EXACT FLOW from Book Club: name-only gate, no auto-login) -->
-    <section id="login-section" class="login">
-      <form class="login-card" id="login-form">
-        <h2>Welcome to PlotLine</h2>
-        <p class="small" style="margin:6px 0 12px">Enter your first name to use your lists</p>
-        <div style="margin-bottom:10px;background:#f7f8f8;padding:8px;border-radius:8px;color:#1b2a23;font-size:12px;border:1px solid var(--line)">
-          This site doesn’t auto-log you in on refresh. Type the same name again to see your lists.
-        </div>
-        <input class="input" type="text" id="username-input" placeholder="Your first name" required style="text-align:center"/>
-        <div style="height:8px"></div>
-        <button class="nav-btn" type="submit">Enter</button>
-      </form>
-    </section>
-
+ 
     <!-- Everything below is hidden until login -->
-    <section id="main-app" style="display:none">
+    <section id="main-app">
       <!-- Stats row -->
       <div class="stats" id="stats">
         <div class="stat"><strong id="total-books">0</strong> books</div>
@@ -308,22 +293,6 @@ function nowISO(){ return new Date().toISOString(); }
 function formatDate(v){ var n=Number(v); var d=new Date(isFinite(n)?n:v); try{ return d.toLocaleDateString(); }catch(_e){ return d.toISOString().slice(0,10);} }
 function showToast(msg,isError){ var t=document.getElementById('toast'); t.textContent=msg; t.classList.toggle('error',!!isError); t.classList.add('show'); clearTimeout(showToast._t); showToast._t=setTimeout(function(){ t.classList.remove('show'); }, isError?3200:1800); }
 function truncate(s,n){ s=String(s||''); n=n||300; return s.length>n? s.slice(0,n-1)+'…' : s; }
-
-/* ===== Book Club–style login state (name-only) ===== */
-let currentUser = '';
-function gateToLogin(){
-  document.getElementById('login-section').style.display='block';
-  document.getElementById('main-app').style.display='none';
-  document.getElementById('user-bar').style.display='none';
-  currentUser = '';
-}
-function gateToApp(name){
-  currentUser = name;
-  document.getElementById('current-user-name').textContent = name;
-  document.getElementById('login-section').style.display='none';
-  document.getElementById('main-app').style.display='';
-  document.getElementById('user-bar').style.display='flex';
-}
 
 /* ===== Storage / Cloud (Book Club–style JSONBin usage kept for PlotLine) ===== */
 const JSONBIN_API = 'https://api.jsonbin.io/v3';
@@ -755,16 +724,8 @@ document.addEventListener('DOMContentLoaded', async function(){
 
 function openSection(id){ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); if(id==='feed') document.getElementById('feed-btn').classList.add('active'); if(id==='add') document.getElementById('add-btn').classList.add('active'); if(id==='my-books') document.getElementById('my-books-btn').classList.add('active'); if(id==='prefs') document.getElementById('prefs-btn').classList.add('active'); }
 </script>
-  <script>
-// Bypass any login gating and boot the app immediately
 document.addEventListener('DOMContentLoaded', async function () {
-  // Show the app, hide/remove any leftover login UI
-  var app = document.getElementById('main-app'); if (app) app.style.display = '';
-  var login = document.getElementById('login-section'); if (login) login.remove();
-  var bar = document.getElementById('user-bar'); if (bar) bar.remove();
-
-  // Run the normal PlotLine init
-  try { await loadAll?.(); } catch(e){ console.warn('loadAll failed (ok to continue):', e); }
+  try { await loadAll?.(); } catch(e){ console.warn('loadAll failed (ok):', e); }
   try {
     populateCategoryOptions?.();
     populateTagFilter?.();
