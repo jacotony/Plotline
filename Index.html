@@ -284,6 +284,9 @@ let API_KEY = localStorage.getItem('$2a$10$1k.Aw1WU5YTjSlKmSLGQ3eK6gaEhRB/j.FzTE
 
 let books = [];
 let sitePrefs = { goals: { year: new Date().getFullYear(), total: 0, byTag: { catholic:0, fiction:0, nonfiction:0 } } };
+  function jbHeaders(){ return {'Content-Type':'application/json','X-Master-Key':API_KEY,'X-Access-Key':API_KEY,'X-Bin-Meta':'false','Accept':'application/json'}; }
+function ns(record){ return (record && record.plotline) ? record.plotline : record; }
+
 
 async function loadAll(){
   try{
@@ -303,10 +306,12 @@ async function cloudPull(){
     document.getElementById('sync-status').textContent = 'Pulling…';
     const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':API_KEY}});
     if(!r.ok) throw new Error(await r.text());
-    const data=await r.json();
-    const record=data.record||{};
-    books = record.books || [];
-    sitePrefs = record.sitePrefs || sitePrefs;
+const data=await r.json();
+const record=data.record||{};
+const scoped = ns(record);
+books = (scoped && Array.isArray(scoped.books)) ? scoped.books : (record.books || []);
+sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs);
+
     await saveAll();
     applyFilters(); renderMyLists(); updateStats();
     document.getElementById('sync-status').textContent = 'Pulled';
@@ -640,6 +645,7 @@ function openSection(id){ document.querySelectorAll('.section').forEach(s=>s.cla
 </script>
 </body>
 </html>
+
 
 
 
