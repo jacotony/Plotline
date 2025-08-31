@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -291,82 +290,6 @@ function jbHeaders(){ return { 'Content-Type':'application/json', 'X-Master-Key'
 // Namespace helper: prefer record.plotline if present
 function ns(record){ return (record && record.plotline) ? record.plotline : record; }
 
-/* ===== Storage / Cloud (Book Club–style auto sync) ===== */
-const JSONBIN_API = 'https://api.jsonbin.io/v3';
-const BIN_ID = '68b3cb8dd0ea881f406ca19e';
-const API_KEY = '$2a$10$iBSfMhVt0mOYgC1uNUPBkuxj6plaS6MOuzL4JPvYzPWsVhJSroRTa';
-
-let books = [];
-let sitePrefs = { goals: { year: new Date().getFullYear(), total: 0, byTag: { catholic:0, fiction:0, nonfiction:0 } } };
-
-/** Auto-pull like Book Club: load local first, then try remote (if configured). */
-async function loadAll(){
-  // 1) Local cache
-  try{
-    const cached = JSON.parse(localStorage.getItem('plotline_payload')||'{}');
-    if (cached.books) books = cached.books;
-    if (cached.sitePrefs) sitePrefs = cached.sitePrefs;
-  }catch(_e){}
-
-  // 2) Remote (only if key+bin are set)
-  if (!API_KEY || !BIN_ID) return; // UI still works locally until user saves creds
-
-  try{
-    const r = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': API_KEY }
-    });
-    if (!r.ok) throw new Error(await r.text());
-    const data = await r.json();
-    const record = data.record || {};
-    const scoped = ns(record);
-    // Prefer namespaced payload; fall back to root fields if present
-    books = Array.isArray(scoped?.books) ? scoped.books : (record.books || books || []);
-    sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs || {});
-    // Re-cache locally
-    localStorage.setItem('plotline_payload', JSON.stringify({ books, sitePrefs }));
-  }catch(e){
-    console.warn('Using local data; JSONBin sync failed:', e);
-  }
-}
-
-/** Auto-push like Book Club: always cache locally, then PUT to JSONBin when configured. */
-async function saveAll(){
-  // 1) Local cache
-  try{
-    localStorage.setItem('plotline_payload', JSON.stringify({ books, sitePrefs }));
-  }catch(_e){}
-
-  // 2) Remote (only if key+bin are set)
-  if (!API_KEY || !BIN_ID) return;
-
-  try{
-    // Merge with whatever else might live in the same bin (don’t clobber other apps)
-    let record = {};
-    try{
-      const latest = await fetch(`${JSONBIN_API}/b/${BIN_ID}/latest`, {
-        headers: { 'X-Master-Key': API_KEY }
-      });
-      if (latest.ok){
-        const j = await latest.json();
-        record = j.record || {};
-      }
-    }catch(_e){}
-
-    record.plotline = { books, sitePrefs };
-
-    await fetch(`${JSONBIN_API}/b/${BIN_ID}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': API_KEY
-      },
-      body: JSON.stringify(record)
-    });
-  }catch(e){
-    console.warn('Remote save failed:', e);
-  }
-}
-  
 async function loadAll(){
   try{
     var cached = JSON.parse(localStorage.getItem('plotline_payload')||'{}');
@@ -719,12 +642,14 @@ document.addEventListener('DOMContentLoaded', async function(){
   document.getElementById('export-json-btn').addEventListener('click', exportJson);
   document.getElementById('import-json').addEventListener('change', function(e){ var f=e.target.files && e.target.files[0]; if(f) importJson(f); e.target.value=''; });
 
-
+  // Cloud controls
+  document.getElementById('cloud-save').addEventListener('click', function(){ API_KEY=(document.getElementById('cloud-api').value||'').trim(); BIN_ID=(document.getElementById('cloud-bin').value||'').trim(); localStorage.setItem('plotline_key',API_KEY); localStorage.setItem('plotline_bin',BIN_ID); showToast('Cloud settings saved'); });
+  document.getElementById('cloud-create').addEventListener('click', cloudCreate);
+  document.getElementById('cloud-pull').addEventListener('click', cloudPull);
+  document.getElementById('cloud-push').addEventListener('click', cloudPush);
+});
 
 function openSection(id){ document.querySelectorAll('.section').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active')); if(id==='feed') document.getElementById('feed-btn').classList.add('active'); if(id==='add') document.getElementById('add-btn').classList.add('active'); if(id==='my-books') document.getElementById('my-books-btn').classList.add('active'); if(id==='prefs') document.getElementById('prefs-btn').classList.add('active'); }
 </script>
 </body>
 </html>
-
-
-
