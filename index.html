@@ -363,12 +363,18 @@ async function loadAll(){
       const txt = await r.text();
       throw new Error(`Pull ${r.status}: ${txt.slice(0,140)}`);
     }
-    const data=await r.json();
-    const record=data.record||{};
+    const data = await r.json();
+    const record = data.record ?? {};
     const scoped = ns(record);
-    books = (scoped && Array.isArray(scoped.books)) ? scoped.books : (record.books || books);
-    sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs);
+    if (Array.isArray(scoped)) {
+      books = scoped;
+    } else {
+      books = Array.isArray(scoped?.books) ? scoped.books
+            : (Array.isArray(record) ? record : (record.books || books));
+      sitePrefs = scoped?.sitePrefs || record.sitePrefs || sitePrefs;
+    }
     try{ localStorage.setItem('plotline_payload', JSON.stringify({books,sitePrefs})); }catch(_e){}
+
     var s=document.getElementById('sync-status'); if(s) s.textContent='Pulled';
   }catch(e){
     console.warn('Using local data; sync failed.', e);
@@ -382,11 +388,9 @@ async function saveAll(){
 
   // remote push (merge into namespaced record)
   try{
-    const latest = await fetch(`${getApiBase()}/b/${getBinId()}/latest`, { headers: jbHeaders() });
-    let record = latest.ok ? ((await latest.json()).record || {}) : {};
-    record.plotline = { books, sitePrefs };
+    const payload = { plotline: { books, sitePrefs } };
     const r = await fetch(`${getApiBase()}/b/${getBinId()}`,{
-      method:'PUT', headers: jbHeaders(), body: JSON.stringify(record)
+      method:'PUT', headers: jbHeaders(), body: JSON.stringify(payload)
     });
     if(!r.ok){
       const txt = await r.text();
@@ -408,13 +412,19 @@ async function cloudPull(){
       const txt = await r.text();
       throw new Error(`Pull ${r.status}: ${txt.slice(0,140)}`);
     }
-    const data=await r.json();
-    const record=data.record||{};
+    const data = await r.json();
+    const record = data.record ?? {};
     const scoped = ns(record);
-    books = (scoped && Array.isArray(scoped.books)) ? scoped.books : (record.books || []);
-    sitePrefs = (scoped && scoped.sitePrefs) ? scoped.sitePrefs : (record.sitePrefs || sitePrefs);
+    if (Array.isArray(scoped)) {
+      books = scoped;
+    } else {
+      books = Array.isArray(scoped?.books) ? scoped.books
+            : (Array.isArray(record) ? record : (record.books || []));
+      sitePrefs = scoped?.sitePrefs || record.sitePrefs || sitePrefs;
+    }
     await saveAll();
     applyFilters(); renderMyLists(); updateStats();
+
     document.getElementById('sync-status').textContent = 'Pulled';
     showToast('Cloud pulled');
   }catch(e){
@@ -424,14 +434,13 @@ async function cloudPull(){
   }
 }
 async function cloudPush(){
+   // remote push (write a stable object shape)
   try{
-    document.getElementById('sync-status').textContent = 'Pushing…';
-    const latest = await fetch(`${getApiBase()}/b/${getBinId()}/latest`, { headers: jbHeaders() });
-    let record = latest.ok ? ((await latest.json()).record || {}) : {};
-    record.plotline = { books, sitePrefs };
+    const payload = { plotline: { books, sitePrefs } };
     const r = await fetch(`${getApiBase()}/b/${getBinId()}`,{
-      method:'PUT', headers: jbHeaders(), body: JSON.stringify(record)
+      method:'PUT', headers: jbHeaders(), body: JSON.stringify(payload)
     });
+
     if(!r.ok){
       const txt = await r.text();
       throw new Error(`Push ${r.status}: ${txt.slice(0,140)}`);
