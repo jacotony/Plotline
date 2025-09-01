@@ -421,9 +421,10 @@ function nextInSeriesOffline(b){
   const found = books.find(x=>x.series && x.series.name.toLowerCase()===b.series.name.toLowerCase() && Number(x.series.number)===target);
   return found || { placeholder:true, name:b.series.name, number:target };
 }
+function isiOSsmsHref(bodyEnc){ return isiOS()? `sms:&body=${bodyEnc}` : `sms:?body=${bodyEnc}`; }
 function smsHrefForBook(b){
   const body = encodeURIComponent(`${b.title} — ${b.author}${b.series&&b.series.name?` (${b.series.name}${b.series.number?` #${b.series.number}`:''})`:''}${b.rating?` • ${b.rating.toFixed(1)}★`:''}`);
-  return isiOS()? `sms:&body=${body}` : `sms:?body=${body}`;
+  return isiOSsmsHref(body);
 }
 function bookCard(book){
   const width=starWidthFromRating(book.rating||0);
@@ -587,7 +588,7 @@ function applyFilters(autoOpenModalIfEmpty=true){
   }
 }
 
-/* ===== Google Books Search + Series Finder ===== */
+/* ===== Google Books Search + Series Finder (POPULARITY FIRST) ===== */
 let lastSearchItems=[];
 const GBOOKS = 'https://www.googleapis.com/books/v1/volumes';
 function normalizeAuthors(a){ return (Array.isArray(a)? a : (a? [a] : [])).join(', '); }
@@ -608,16 +609,25 @@ async function googleBooksSearch(q, maxResults){
   return await r.json();
 }
 function volumeToItem(it){
-  const v=it.volumeInfo||{};
-  const title=v.title||'Unknown Title';
-  const authors=normalizeAuthors(v.authors||[]);
-  const cover=(v.imageLinks&& (v.imageLinks.thumbnail||v.imageLinks.smallThumbnail))||'';
-  const description=v.description||'';
-  const categories=v.categories||[];
-  const publishedDate=v.publishedDate||'';
+  const v = it.volumeInfo || {};
+  const title = v.title || 'Unknown Title';
+  const authors = normalizeAuthors(v.authors || []);
+  const cover = (v.imageLinks && (v.imageLinks.thumbnail || v.imageLinks.smallThumbnail)) || '';
+  const description = v.description || '';
+  const categories = v.categories || [];
+  const publishedDate = v.publishedDate || '';
   const seriesGuess = parseSeriesFromTitle(title);
   const seriesNumberGuess = (seriesGuess && seriesGuess.number) ? Number(seriesGuess.number) : null;
-  return { id: it.id, title, authors, cover, description, categories, publishedDate, seriesGuess, seriesNumberGuess };
+
+  // Popularity score: ratingsCount dominates; averageRating multiplies it.
+  const averageRating = Number(v.averageRating || 0);
+  const ratingsCount = Number(v.ratingsCount || v.ratingscount || 0);
+  const popularity = (averageRating && ratingsCount) ? (averageRating * ratingsCount) : ratingsCount;
+
+  return {
+    id: it.id, title, authors, cover, description, categories, publishedDate,
+    seriesGuess, seriesNumberGuess, averageRating, ratingsCount, popularity
+  };
 }
 function mapCategoriesToGenre(cats){
   const c = (cats||[]).join(' | ').toLowerCase();
@@ -663,6 +673,7 @@ function renderExternalResults(){
     const checked = seriesCtx.selected.has(idx) ? 'checked' : '';
     const n = (it.seriesNumberGuess!=null) ? ` #${it.seriesNumberGuess}` : '';
     const rd = it.publishedDate ? ` • ${escapeHtml(it.publishedDate)}` : '';
+    const pop = it.popularity ? ` • pop ${Math.round(it.popularity)}` : '';
     return `
       <div class="result-row" data-sidx="${idx}">
         <input type="checkbox" class="ext-check" data-sidx="${idx}" ${checked} style="width:18px;height:18px;margin:8px 6px 0 0">
@@ -670,7 +681,7 @@ function renderExternalResults(){
         <div style="flex:1 1 auto">
           <strong>${escapeHtml(it.title)}</strong>
           <div class="chip" style="margin-top:2px">${escapeHtml(it.authors||'')}</div>
-          <div class="chip" style="margin-top:2px">${it.seriesGuess? 'Series: '+escapeHtml(it.seriesGuess.name)+n : 'Standalone?' }${rd}</div>
+          <div class="chip" style="margin-top:2px">${it.seriesGuess? 'Series: '+escapeHtml(it.seriesGuess.name)+n : 'Standalone?'}${rd}${pop}</div>
         </div>
         <button class="action" data-one-add="${idx}" type="button">Add</button>
       </div>
@@ -685,30 +696,36 @@ async function runExternalSearch(name, author){
   if(!q){ renderExternalResults(); return; }
   try{
     const data = await googleBooksSearch(q, 40);
-    const items = (data.items||[]).map(volumeToItem);
 
-    // Auto-detect top series in results for the "watch" and releases buttons
-    const names = items.map(x=>x.seriesGuess && x.seriesGuess.name).filter(Boolean);
-    if(names.length){
-      const counts = {}; names.forEach(n=>counts[n]=(counts[n]||0)+1);
+    // 1) Map volumes
+    const items = (data.items || []).map(volumeToItem);
+
+    // 2) Choose a likely series name (for watch)
+    const names = items.map(x => x.seriesGuess && x.seriesGuess.name).filter(Boolean);
+    if (names.length){
+      const counts = {}; names.forEach(n => counts[n] = (counts[n] || 0) + 1);
       const top = Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
       seriesCtx.name = top;
       document.getElementById('ext-search-input').value = top;
     }
 
-    // Narrow to likely series entries first
-    const filtered = items.filter(it=>{
+    // 3) keep likely series matches
+    let filtered = items.filter(it=>{
       if(!it.title) return false;
       if(seriesCtx.name){
         const t = it.title.toLowerCase();
         return t.includes(seriesCtx.name.toLowerCase()) || !!it.seriesGuess;
       }
       return true;
-    }).sort((a,b)=>{
-      const an=a.seriesNumberGuess, bn=b.seriesNumberGuess;
-      if(an!=null && bn!=null) return an-bn;
-      if(an!=null) return -1;
-      if(bn!=null) return 1;
+    });
+
+    // 4) POPULARITY DESC, then by series number, then title
+    filtered.sort((a,b)=>{
+      const pop = (b.popularity||0) - (a.popularity||0);
+      if(pop !== 0) return pop;
+      const an = (a.seriesNumberGuess!=null ? a.seriesNumberGuess : 9999);
+      const bn = (b.seriesNumberGuess!=null ? b.seriesNumberGuess : 9999);
+      if(an !== bn) return an - bn;
       return a.title.localeCompare(b.title);
     });
 
@@ -768,24 +785,76 @@ function importJson(file){
   fr.readAsText(file);
 }
 
-/* ===== Modal / Rating (Finish & Rate) ===== */
-let ratingDraft = 0; let finishContext=null;
+/* ===== Finish & Rate (bullet-proof) ===== */
+let ratingDraft = 0;
+let finishContext = null;
+
 function bindStarHit(elFg, elHit, feedbackEl){
-  function setFromIndex(i){ const r = (i+1)/2; ratingDraft = r; elFg.style.width = starWidthFromRating(r); if(feedbackEl) feedbackEl.textContent = r.toFixed(1)+'★'; }
+  function setFromIndex(i){
+    const r = (i+1)/2;
+    ratingDraft = r;
+    elFg.style.width = starWidthFromRating(r);
+    if(feedbackEl) feedbackEl.textContent = r.toFixed(1)+'★';
+  }
   elHit.innerHTML = Array.from({length:10},(_,i)=>`<button type="button" data-i="${i}"></button>`).join('');
-  elHit.addEventListener('click', function(e){ var btn=e.target.closest('button'); if(!btn) return; var i=Number(btn.getAttribute('data-i')); setFromIndex(i); });
+  elHit.addEventListener('click', function(e){
+    const btn = e.target.closest('button'); if(!btn) return;
+    const i = Number(btn.getAttribute('data-i'));
+    setFromIndex(i);
+  });
 }
+
 function openFinishModal(book){
-  finishContext = {bookId: book.id};
+  finishContext = { bookId: String(book.id) }; // normalize as string
   document.getElementById('finish-title').textContent = book.title+' — '+book.author;
-  var fg=document.getElementById('finish-fg');
-  var hit=document.getElementById('finish-hit');
-  hit.innerHTML = ''; bindStarHit(fg,hit,null);
-  ratingDraft = Number(book.rating||0);
-  fg.style.width=starWidthFromRating(ratingDraft);
+
+  const fg  = document.getElementById('finish-fg');
+  const hit = document.getElementById('finish-hit');
+
+  hit.innerHTML = '';
+  bindStarHit(fg, hit, null);
+
+  ratingDraft = Number(book.rating || 0);
+  fg.style.width = starWidthFromRating(ratingDraft);
+
   document.getElementById('finish-modal').classList.add('show');
 }
-function closeFinishModal(){ document.getElementById('finish-modal').classList.remove('show'); finishContext=null; ratingDraft=0; }
+
+function closeFinishModal(){
+  document.getElementById('finish-modal').classList.remove('show');
+  finishContext = null;
+  ratingDraft = 0;
+}
+
+function saveFinish(){
+  if(!finishContext){ showToast('No book selected', true); return; }
+  const idx = books.findIndex(b => String(b.id) === String(finishContext.bookId));
+  if(idx === -1){ showToast('Book not found', true); closeFinishModal(); return; }
+  const book = books[idx];
+
+  // Ensure we have an open session to close
+  if(book.status !== 'reading'){ startReading(book); }
+
+  // Apply rating (0 allowed)
+  const r = Number.isFinite(ratingDraft) ? ratingDraft : 0;
+  book.rating = r;
+  if(!book.sessions) book.sessions = [];
+  if(book.sessions.length === 0) book.sessions.push({startedAt: nowISO()});
+  const cur = book.sessions[book.sessions.length-1];
+  cur.rating = r;
+
+  // Mark as finished now
+  finishReading(book, r);
+  book.status = 'read';
+
+  books[idx] = book;
+  saveAll();
+
+  closeFinishModal();
+  applyFilters(false);
+  updateStats();
+  showToast('Marked as read!');
+}
 
 /* ===== Watch / Releases ===== */
 async function checkSeriesReleases(name, author){
@@ -911,7 +980,6 @@ document.addEventListener('DOMContentLoaded', function(){
       (async ()=>{
         openSearchModal(cur.series.name, cur.author||'');
         await runExternalSearch(cur.series.name, cur.author||'');
-        // preselect first volume with higher number
         const cn = Number(cur.series.number||0);
         const idx = seriesCtx.items.findIndex(it => it.seriesNumberGuess!=null && it.seriesNumberGuess>cn);
         if(idx>-1){ seriesCtx.selected = new Set([idx]); renderExternalResults(); }
@@ -927,26 +995,19 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   });
 
-  // Finish modal
-  function saveFinish(){
-    try{
-      if(!finishContext){ closeFinishModal(); return; }
-      var book=books.find(b=>b.id===finishContext.bookId);
-      if(!book){ closeFinishModal(); return; }
-      finishReading(book, ratingDraft||book.rating||0);
-      book.status='read';
-      saveAll(); closeFinishModal(); applyFilters(false); updateStats(); showToast('Marked as read!');
-    }catch(e){ console.warn(e); closeFinishModal(); showToast('Saved locally. If something looks off, refresh.',true); }
-  }
-  document.getElementById('finish-save').addEventListener('click', saveFinish);
-  document.getElementById('finish-cancel').addEventListener('click', closeFinishModal);
-  document.addEventListener('keydown',function(e){
-    if(e.key==='Escape' && document.getElementById('finish-modal').classList.contains('show')) closeFinishModal();
-    if(e.key==='Enter' && document.getElementById('finish-modal').classList.contains('show')) saveFinish();
+  /* bind finish modal events */
+  document.getElementById('finish-save').onclick   = saveFinish;
+  document.getElementById('finish-cancel').onclick = closeFinishModal;
+
+  document.addEventListener('keydown', function(e){
+    const modalOpen = document.getElementById('finish-modal').classList.contains('show');
+    if(!modalOpen) return;
+    if(e.key === 'Escape') closeFinishModal();
+    if(e.key === 'Enter')  saveFinish();
   });
   document.addEventListener('click',function(e){
     var m=document.getElementById('finish-modal'); if(!m || !m.classList.contains('show')) return;
-    if(!m.contains(e.target) && !e.target.closest('#finish-modal')) closeFinishModal();
+    if(!e.target.closest('#finish-modal')) closeFinishModal();
   });
 
   // Goals
