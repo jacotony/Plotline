@@ -970,19 +970,51 @@ async function checkWatchedReleases(){
 /* ===== Boot / Events ===== */
 document.addEventListener('DOMContentLoaded', function(){
   // PWA manifest/light SW
-  (function setupPWA(){
-    try{
-      const manifest={name:'PlotLine',short_name:'PlotLine',start_url:'.',display:'standalone',background_color:'#ffffff',theme_color:'#2f4a3e',icons:[{src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAAAAABQFZ1hAAAAC0lEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAB4p1nNAAE=',sizes:'192x192',type:'image/png'}]};
-      const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'});
-      const url=URL.createObjectURL(blob);
-      const link=document.getElementById('app-manifest'); if(link) link.href=url;
-      if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
-        const sw="self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open('pl-v1').then(c=>c.addAll(['./'])))});self.addEventListener('activate',e=>self.clients.claim());self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))})";
-        const swUrl=URL.createObjectURL(new Blob([sw],{type:'text/javascript'}));
-        navigator.serviceWorker.register(swUrl).catch(function(){});
-      }
-    }catch(_e){}
-  })();
+(function setupPWA(){
+  try{
+    // Bump this string on each deploy to force clients to refresh
+    const PL_VERSION = 'v4';
+
+    const manifest = {
+      name:'PlotLine',
+      short_name:'PlotLine',
+      start_url:`./?v=${PL_VERSION}`,  // cache-bust start URL
+      display:'standalone',
+      background_color:'#ffffff',
+      theme_color:'#2f4a3e',
+      icons:[{
+        src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAAAAABQFZ1hAAAAC0lEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAB4p1nNAAE=',
+        sizes:'192x192',
+        type:'image/png'
+      }]
+    };
+
+    const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+    const url = URL.createObjectURL(blob);
+    const link = document.getElementById('app-manifest'); if(link) link.href = url;
+
+    if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+      const sw = `
+        const CACHE_NAME = 'pl-${PL_VERSION}';
+        self.addEventListener('install', e=>{
+          self.skipWaiting();
+          e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(['./','./index.html'])));
+        });
+        self.addEventListener('activate', e=> self.clients.claim());
+        // Network-first with offline fallback
+        self.addEventListener('fetch', e=>{
+          e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+        });
+      `;
+      const swUrl = URL.createObjectURL(new Blob([sw], {type:'text/javascript'}));
+      navigator.serviceWorker.register(swUrl).catch(function(){});
+    }
+
+    // Handy confirmation in DevTools console
+    console.log('PlotLine build', PL_VERSION);
+  }catch(_e){}
+})();
+
 
   // Login wiring
   gateToLogin();
