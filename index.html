@@ -18,14 +18,8 @@
 
 <style>
   :root{
-    --paper:#f4f1ea;
-    --paper-2:#fbfaf7;
-    --ink:#382110;
-    --ink-2:#333;
-    --accent:#00635d;
-    --gold:#f4c150;
-    --line:#d6d0c4;
-    --muted:#6a5d50;
+    --paper:#f4f1ea; --paper-2:#fbfaf7; --ink:#382110; --ink-2:#333;
+    --accent:#00635d; --gold:#f4c150; --line:#d6d0c4; --muted:#6a5d50;
     --shadow:0 2px 6px rgba(0,0,0,.06);
     --s-top: env(safe-area-inset-top, 0px);
     --s-right: env(safe-area-inset-right, 0px);
@@ -35,9 +29,7 @@
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%}
   body{
-    -webkit-font-smoothing:antialiased;
-    -moz-osx-font-smoothing:grayscale;
-    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; -webkit-tap-highlight-color: transparent;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
     background:var(--paper);color:var(--ink);
     min-height:100dvh;
@@ -69,10 +61,9 @@
 
   .chip{background:#ede6d6;border:1px solid #e1d7c6;color:#5a4632;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:700}
 
-  .section{display:none}.section.active{display:block}
-
   .feed{display:flex;flex-direction:column;gap:12px}
   .post{border:1px solid var(--line);border-left:4px solid #ddd;border-radius:8px;padding:12px;background:#fff;box-shadow:var(--shadow)}
+  .group-title{font-size:.95rem;font-weight:900;color:#2a3a33;margin:4px 0 2px}
   .head{display:flex;gap:12px;align-items:flex-start}
   .cover{width:64px;height:96px;object-fit:cover;border-radius:4px;border:1px solid #e6ece8;flex-shrink:0}
   .cover-ph{width:64px;height:96px;background:linear-gradient(135deg,#e9ecef 0%,#dee2e6 100%);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#2d3436;flex-shrink:0}
@@ -105,8 +96,12 @@
   .star-hit{position:absolute;top:0;left:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(10,1fr)}
   .star-hit button{background:transparent;border:0;padding:0;margin:0;cursor:pointer}
 
-  #finish-modal{position:fixed;left:50%;top:20%;transform:translate(-50%,0);background:#2f2f2f;color:#fff;border-radius:10px;padding:14px;box-shadow:0 10px 24px rgba(0,0,0,.25);z-index:10000;display:none;max-width:520px}
-  #finish-modal.show{display:block}
+  #finish-modal,#search-modal{position:fixed;left:50%;top:8%;transform:translate(-50%,0);background:#2f2f2f;color:#fff;border-radius:10px;padding:14px;box-shadow:0 10px 24px rgba(0,0,0,.25);z-index:10000;display:none;max-width:720px;width:96%}
+  #finish-modal.show,#search-modal.show{display:block}
+  #search-modal h3{margin-bottom:8px}
+  #search-results{max-height:52vh;overflow:auto;background:#fff;color:#2a2a2a;border-radius:8px;border:1px solid #ddd;padding:8px}
+  .result-row{display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid #eee;padding:6px 0}
+  .result-row:last-child{border-bottom:0}
 
   @media(max-width:840px){ .search{grid-template-columns:1fr 1fr 1fr} }
   @media(max-width:640px){
@@ -135,18 +130,17 @@
     <main class="content">
       <nav class="nav" id="main-nav">
         <button class="nav-btn active" id="feed-btn" type="button">Library</button>
-        <button class="nav-btn" id="add-btn" type="button">Add Book</button>
-        <button class="nav-btn" id="my-books-btn" type="button">Lists</button>
         <button class="nav-btn" id="prefs-btn" type="button">Goals & Backup</button>
       </nav>
 
+      <!-- LIBRARY (only main view) -->
       <section id="feed" class="section active">
         <div class="search">
-          <input type="text" class="input" placeholder="Search title, author, tag…" id="search-input"/>
+          <input type="text" class="input" placeholder="Search your library (title, author, tag) — if no match, we’ll fetch & detect the series…" id="search-input"/>
           <select class="select" id="tag-filter"><option value="">All Tags</option></select>
           <select class="select" id="category-filter"><option value="">All Categories</option></select>
           <select class="select" id="min-rating"><option value="0">Min ★ (Any)</option><option value="5">5★</option><option value="4">4★+</option><option value="3">3★+</option></select>
-          <select class="select" id="sort-by"><option value="new">Newest</option><option value="rating">Highest Rated</option><option value="title">Title A–Z</option></select>
+          <select class="select" id="sort-by"><option value="smart">Smart (Reading first)</option><option value="new">Newest</option><option value="rating">Highest Rated</option><option value="title">Title A–Z</option></select>
         </div>
 
         <div class="results-bar">
@@ -157,91 +151,11 @@
           </div>
         </div>
 
+        <!-- Grouped library feed -->
         <div id="books-feed" class="feed"></div>
       </section>
 
-      <section id="add" class="section">
-        <div class="post">
-          <h3 style="margin-bottom:8px">Add a Book</h3>
-          <div class="search" style="grid-template-columns:2fr 1fr">
-            <div class="dropdown" style="position:relative">
-              <input id="book-search" class="input" type="text" placeholder="Search Google Books to auto-fill…"/>
-              <div id="book-results" class="post" style="position:absolute;left:0;right:0;max-height:280px;overflow:auto;z-index:40;display:none"></div>
-            </div>
-            <div>
-              <label class="chip" style="display:inline-block;margin-bottom:6px">Initial Rating (optional)</label>
-              <div class="stars" id="rating-stars" aria-label="rating stars">
-                <div class="bg">★★★★★</div>
-                <div class="fg" style="width:0%">★★★★★</div>
-                <div class="star-hit" id="rating-hit"></div>
-              </div>
-              <div id="rating-feedback" class="chip" style="margin-left:8px">Click stars (supports ½★)</div>
-            </div>
-          </div>
-
-          <form id="book-form">
-            <div class="search" style="grid-template-columns:1fr 1fr 1fr">
-              <div><label class="chip">Title *</label><input class="input" type="text" id="title" required/></div>
-              <div><label class="chip">Author *</label><input class="input" type="text" id="author" required/></div>
-              <div>
-                <label class="chip">Category</label>
-                <select class="select" id="genre"></select>
-              </div>
-            </div>
-
-            <div class="search" style="grid-template-columns:1fr 1fr">
-              <div><label class="chip">Cover Image (URL)</label><input class="input" type="url" id="book-image" placeholder="https://…"/></div>
-              <div><label class="chip">Tags</label>
-                <input type="text" class="input" id="tag-input" placeholder="Comma-separated (e.g., catholic, fiction)"/>
-              </div>
-            </div>
-
-            <div><label class="chip">Synopsis</label><textarea class="textarea" id="synopsis" placeholder="Book description…"></textarea></div>
-
-            <div class="search" style="grid-template-columns:1fr 1fr 1fr">
-              <div>
-                <label class="chip">Add to</label>
-                <select id="initial-status" class="select">
-                  <option value="wish">Want to Read</option>
-                  <option value="reading">Currently Reading</option>
-                  <option value="read">Already Read</option>
-                  <option value="upcoming">Upcoming (future release)</option>
-                </select>
-              </div>
-              <div></div><div></div>
-            </div>
-
-            <div style="height:6px"></div>
-            <button type="submit" class="action">Save Book</button>
-          </form>
-        </div>
-
-        <!-- Series Finder Panel -->
-        <div class="post" id="series-panel" style="display:none; margin-top:10px">
-          <h3 style="margin-bottom:8px">Series Finder</h3>
-          <p class="chip" id="series-hint" style="display:inline-block;margin-bottom:6px">Pick a result above or type a series name.</p>
-          <div class="search" style="grid-template-columns:2fr 1fr auto">
-            <input id="series-name-input" class="input" placeholder="Series name (e.g., The Expanse)"/>
-            <input id="series-author-input" class="input" placeholder="Author (optional)"/>
-            <button id="series-search-btn" class="action" type="button">Find Series</button>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0">
-            <button id="series-select-all" class="action" type="button">Select All</button>
-            <button id="series-add-selected" class="action" type="button">Add Selected to Want to Read</button>
-            <label class="chip" title="Shows a toast on app open if a new volume appears"><input type="checkbox" id="series-watch"> Watch this series</label>
-            <button id="series-check-releases" class="action" type="button">Check Releases</button>
-          </div>
-          <div id="series-results" class="feed"></div>
-        </div>
-      </section>
-
-      <section id="my-books" class="section">
-        <h3 style="margin-bottom:8px">My Lists</h3>
-        <div class="post" style="margin-bottom:8px"><h4>Want to Read</h4><div id="wish-list"></div></div>
-        <div class="post" style="margin-bottom:8px"><h4>Currently Reading</h4><div id="current-reading"></div></div>
-        <div class="post"><h4>Read</h4><div id="read-list"></div></div>
-      </section>
-
+      <!-- PREFS -->
       <section id="prefs" class="section">
         <h2 style="margin-bottom:8px;color:var(--ink);font-size:1.1rem">Goals & Backup</h2>
 
@@ -290,6 +204,7 @@
 
   <div id="toast" class="toast"></div>
 
+  <!-- Finish & Rate -->
   <div id="finish-modal">
     <div>
       <h3 id="finish-heading" style="margin-bottom:6px">Rate this book</h3>
@@ -306,8 +221,30 @@
     </div>
   </div>
 
+  <!-- Search & Add (auto-opens when no local matches) -->
+  <div id="search-modal">
+    <div>
+      <h3>Not in your library — search & add</h3>
+      <div class="search" style="grid-template-columns:2fr 1fr auto">
+        <input id="ext-search-input" class="input" placeholder="Title or series name"/>
+        <input id="ext-search-author" class="input" placeholder="Author (optional)"/>
+        <button id="ext-search-btn" class="action" type="button">Search</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0">
+        <button id="ext-select-all" class="action" type="button">Select All</button>
+        <button id="ext-add-selected" class="action" type="button">Add Selected to Want to Read</button>
+        <label class="chip"><input type="checkbox" id="ext-watch"> Watch this series</label>
+        <button id="ext-check-releases" class="action" type="button">Check Releases</button>
+      </div>
+      <div id="search-results"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+        <button class="action" id="ext-close" type="button">Close</button>
+      </div>
+    </div>
+  </div>
+
 <script>
-/* ===== Tiny SW kill switch (prevents stale pages) ===== */
+/* ===== Kill old service workers ===== */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
 }
@@ -327,6 +264,7 @@ function toDateObj(publishedDate){
   var dt=new Date(Date.UTC(y,m,d));
   return isNaN(dt.getTime())? null : dt;
 }
+function isiOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; }
 
 /* ===== Storage / Cloud (JSONBin v3) ===== */
 const DEFAULT_JSONBIN_API = 'https://api.jsonbin.io/v3';
@@ -340,10 +278,7 @@ function getApiBase(){ return (localStorage.getItem('plotline_api_base') || DEFA
 let books = [];
 let sitePrefs = { goals: { year: new Date().getFullYear(), total: 0, byTag: { catholic:0, fiction:0, nonfiction:0 } }, watchSeries: {} };
 
-function jbHeaders(){
-  const key = getApiKey();
-  return { 'Content-Type':'application/json','X-Master-Key': key,'X-Bin-Meta': 'false','Accept':'application/json' };
-}
+function jbHeaders(){ return { 'Content-Type':'application/json','X-Master-Key': getApiKey(),'X-Bin-Meta': 'false','Accept':'application/json' }; }
 function ns(record){ return (record && record.plotline) ? record.plotline : record; }
 
 async function loadAll(){
@@ -352,26 +287,22 @@ async function loadAll(){
     if(cached.books) books = cached.books;
     if(cached.sitePrefs) sitePrefs = Object.assign({watchSeries:{}}, cached.sitePrefs);
   }catch(_e){}
-
   try{
     const r = await fetch(`${getApiBase()}/b/${getBinId()}/latest`,{headers: jbHeaders()});
-    if(!r.ok){ const txt = await r.text(); throw new Error(`Pull ${r.status}: ${txt.slice(0,140)}`); }
-    const data = await r.json();
-    const record = (data && (data.record ?? data)) || {};
-    const scoped = ns(record);
-    if (Array.isArray(scoped)) { books = scoped; }
-    else {
-      books = Array.isArray(scoped?.books) ? scoped.books
-            : (Array.isArray(record) ? record : (record.books || books));
-      sitePrefs = Object.assign({watchSeries:{}}, scoped?.sitePrefs || record.sitePrefs || sitePrefs);
+    if(r.ok){
+      const data = await r.json();
+      const record = (data && (data.record ?? data)) || {};
+      const scoped = ns(record);
+      if (Array.isArray(scoped)) { books = scoped; }
+      else {
+        books = Array.isArray(scoped?.books) ? scoped.books
+              : (Array.isArray(record) ? record : (record.books || books));
+        sitePrefs = Object.assign({watchSeries:{}}, scoped?.sitePrefs || record.sitePrefs || sitePrefs);
+      }
+      try{ localStorage.setItem('plotline_payload', JSON.stringify({books,sitePrefs})); }catch(_e){}
+      var s=document.getElementById('sync-status'); if(s) s.textContent='Pulled';
     }
-    try{ localStorage.setItem('plotline_payload', JSON.stringify({books,sitePrefs})); }catch(_e){}
-    var s=document.getElementById('sync-status'); if(s) s.textContent='Pulled';
-  }catch(e){
-    console.warn('Using local data; sync failed.', e);
-    var s2=document.getElementById('sync-status'); if(s2) s2.textContent='Pull failed';
-    showToast(e.message||'Cloud pull failed', true);
-  }
+  }catch(e){ console.warn('Cloud pull failed; using local', e); }
 }
 async function saveAll(){
   try{ localStorage.setItem('plotline_payload', JSON.stringify({books,sitePrefs})); }catch(_e){}
@@ -379,18 +310,12 @@ async function saveAll(){
     const latest = await fetch(`${getApiBase()}/b/${getBinId()}/latest`, { headers: jbHeaders() });
     let record = latest.ok ? ((await latest.json()).record || {}) : {};
     record.plotline = { books, sitePrefs };
-    const r = await fetch(`${getApiBase()}/b/${getBinId()}`,{
-      method:'PUT', headers: jbHeaders(), body: JSON.stringify(record)
-    });
+    const r = await fetch(`${getApiBase()}/b/${getBinId()}`,{ method:'PUT', headers: jbHeaders(), body: JSON.stringify(record) });
     if(!r.ok){ const txt = await r.text(); throw new Error(`Push ${r.status}: ${txt.slice(0,140)}`); }
     var s=document.getElementById('sync-status'); if(s) s.textContent='Pushed';
-  }catch(e){
-    console.warn('Remote save failed',e);
-    var s2=document.getElementById('sync-status'); if(s2) s2.textContent='Push failed';
-    showToast(e.message||'Push failed',true);
-  }
+  }catch(e){ console.warn('Remote save failed',e); var s2=document.getElementById('sync-status'); if(s2) s2.textContent='Push failed'; }
 }
-async function cloudPull(){ document.getElementById('sync-status').textContent='Pulling…'; await loadAll(); applyFilters(); renderMyLists(); updateStats(); document.getElementById('sync-status').textContent='Pulled'; showToast('Cloud pulled'); }
+async function cloudPull(){ document.getElementById('sync-status').textContent='Pulling…'; await loadAll(); applyFilters(); updateStats(); document.getElementById('sync-status').textContent='Pulled'; showToast('Cloud pulled'); }
 async function cloudPush(){ try{ document.getElementById('sync-status').textContent='Pushing…'; await saveAll(); document.getElementById('sync-status').textContent='Pushed'; showToast('Cloud pushed'); }catch(e){ document.getElementById('sync-status').textContent='Push failed'; showToast(e.message||'Push failed',true);} }
 async function cloudCreate(){
   try{
@@ -405,19 +330,7 @@ async function cloudCreate(){
     document.getElementById('cloud-bin').value = newId;
     showToast('New JSONBin created & saved: '+newId);
     document.getElementById('sync-status').textContent='New bin created';
-  }catch(e){
-    console.warn(e);
-    document.getElementById('sync-status').textContent='Create failed';
-    showToast(e.message||'Create failed',true);
-  }
-}
-function updateCloudInputsUI(){
-  const api=document.getElementById('cloud-api');
-  const bin=document.getElementById('cloud-bin');
-  const savedKey = localStorage.getItem('plotline_api_key') || '';
-  const savedBin = localStorage.getItem('plotline_bin_id') || '';
-  if(api){ api.value = savedKey; api.placeholder = savedKey ? '(saved)' : 'Paste your JSONBin API key'; }
-  if(bin){ bin.value = savedBin; bin.placeholder = savedBin ? '(saved)' : 'Paste your Bin ID'; }
+  }catch(e){ console.warn(e); document.getElementById('sync-status').textContent='Create failed'; showToast(e.message||'Create failed',true); }
 }
 
 /* ===== Data Model Helpers ===== */
@@ -508,6 +421,10 @@ function nextInSeriesOffline(b){
   const found = books.find(x=>x.series && x.series.name.toLowerCase()===b.series.name.toLowerCase() && Number(x.series.number)===target);
   return found || { placeholder:true, name:b.series.name, number:target };
 }
+function smsHrefForBook(b){
+  const body = encodeURIComponent(`${b.title} — ${b.author}${b.series&&b.series.name?` (${b.series.name}${b.series.number?` #${b.series.number}`:''})`:''}${b.rating?` • ${b.rating.toFixed(1)}★`:''}`);
+  return isiOS()? `sms:&body=${body}` : `sms:?body=${body}`;
+}
 function bookCard(book){
   const width=starWidthFromRating(book.rating||0);
   const collapsed = (document.getElementById('collapse-all') && document.getElementById('collapse-all').checked);
@@ -525,8 +442,7 @@ function bookCard(book){
     '  <div class="head">',
     '    '+bookCoverBlock(book),
     '    <div class="info">',
-    '      <div class="genre">'+escapeHtml(book.genre||'other')+'</div>',
-    '      '+seriesChip(book),
+    '      <div><span class="genre">'+escapeHtml(book.genre||'other')+'</span> '+seriesChip(book)+'</div>',
     '      <div class="title">'+escapeHtml(book.title)+'</div>',
     '      <div class="author">by '+escapeHtml(book.author)+'</div>',
     '      <div class="rating-line">'+starWidgetHTML(width)+'<span class="chip">'+(book.rating? (Number(book.rating).toFixed(1)+'★') : 'No rating')+'</span></div>',
@@ -540,6 +456,8 @@ function bookCard(book){
     '    <button class="action" type="button" data-action="wish" data-id="'+book.id+'">📚 Want to Read</button>',
     '    <button class="action" type="button" data-action="reading" data-id="'+book.id+'">📖 Start / Currently Reading</button>',
     '    <button class="action" type="button" data-action="finish" data-id="'+book.id+'">✅ Finish & Rate</button>',
+    '    <button class="action" type="button" data-action="find-like" data-id="'+book.id+'">🔎 More like this</button>',
+    '    <a class="action" href="'+smsHrefForBook(book)+'" data-action="sms" data-id="'+book.id+'">📲 Text</a>',
     '    <button class="action" type="button" data-action="edit" data-id="'+book.id+'">✏️ Edit</button>',
     '    <button class="action" type="button" data-action="delete" data-id="'+book.id+'">🗑️ Delete</button>',
     '  </div>',
@@ -547,26 +465,28 @@ function bookCard(book){
   ].join('');
 }
 
+/* Grouped render: Reading → Upcoming → Wish → Read (smart sort) */
 let currentBooks=[];
+function groupedByStatus(list){
+  const g = {reading:[],upcoming:[],wish:[],read:[]};
+  list.forEach(b=>{ (g[b.status]||g.read).push(b); });
+  return g;
+}
 function renderBooks(){
   const c=document.getElementById('books-feed');
   if(!currentBooks.length){
-    c.innerHTML='<div style="text-align:center;padding:28px;color:#6a5d50"><h3 style="font-size:1rem">No books found</h3><p class="chip">Add a book or adjust filters.</p></div>';
+    c.innerHTML='<div style="text-align:center;padding:28px;color:#6a5d50"><h3 style="font-size:1rem">No books found</h3><p class="chip">Type in the search box to add new titles (auto series).</p></div>';
     document.getElementById('result-count').textContent='0 results'; return;
   }
-  c.innerHTML=currentBooks.map(bookCard).join('');
+  const g = groupedByStatus(currentBooks);
+  function sect(name, arr){ if(!arr.length) return ''; return `<div class="group-title">${name} (${arr.length})</div>` + arr.map(bookCard).join(''); }
+  c.innerHTML=[
+    sect('Currently Reading', g.reading),
+    sect('Upcoming', g.upcoming),
+    sect('Want to Read', g.wish),
+    sect('Read', g.read)
+  ].join('');
   document.getElementById('result-count').textContent=String(currentBooks.length)+' result'+(currentBooks.length===1?'':'s');
-}
-function renderMyLists(){
-  function make(arr,actions){
-    return arr.length?arr.map(b=>`<div class="head" data-id="${b.id}" style="justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0"><div><strong>${escapeHtml(b.title)}</strong> by ${escapeHtml(b.author)} ${seriesChip(b)}</div><div>${actions(b)}</div></div>`).join(''):'<p class="chip" style="font-style:italic">Nothing here yet</p>';
-  }
-  const wish = books.filter(b=>b.status==='wish' || b.status==='upcoming');
-  const reading = books.filter(b=>b.status==='reading');
-  const read = books.filter(b=>b.status==='read');
-  document.getElementById('wish-list').innerHTML=make(wish,b=>`<button class="action" type="button" data-action="reading" data-id="${b.id}">Start</button> <button class="action" type="button" data-action="delete" data-id="${b.id}">Delete</button>`);
-  document.getElementById('current-reading').innerHTML=make(reading,b=>`<button class="action" type="button" data-action="finish" data-id="${b.id}">Finish</button> <button class="action" type="button" data-action="wish" data-id="${b.id}">Move to Wish</button>`);
-  document.getElementById('read-list').innerHTML=make(read,b=>`<span class="chip">${(b.rating||0).toFixed(1)}★</span> <button class="action" type="button" data-action="reading" data-id="${b.id}">Re-read</button>`);
 }
 
 /* ===== Stats ===== */
@@ -605,9 +525,7 @@ function populateCategoryOptions(){
     'Mystery','Thriller','Horror','Romance','Fantasy','Sci-Fi','Dystopian','Young Adult',
     'Classics','Literary Fiction','Poetry','Comics/Graphic Novel','Reference','Other'
   ];
-  document.getElementById('genre').innerHTML=opts.map(o=>'<option value="'+escapeAttr(o.toLowerCase())+'">'+escapeHtml(o)+'</option>').join('');
-  var feedCat=document.getElementById('category-filter');
-  feedCat.innerHTML=['<option value="">All Categories</option>'].concat(opts.map(o=>'<option value="'+escapeAttr(o.toLowerCase())+'">'+escapeHtml(o)+'</option>')).join('');
+  document.getElementById('category-filter').innerHTML=['<option value="">All Categories</option>'].concat(opts.map(o=>'<option value="'+escapeAttr(o.toLowerCase())+'">'+escapeHtml(o)+'</option>')).join('');
 }
 function getAllTagsUnique(){
   var set={}; books.forEach(b=>{ (b.tags||[]).forEach(t=>{ set[String(t).toLowerCase()]=1; }); });
@@ -634,7 +552,16 @@ function bookSearchScore(b,t){
   if(tags.some(x=>x.indexOf(term)>-1)) score+=25;
   return score;
 }
-function applyFilters(){
+function smartSort(list){
+  return list.slice().sort((a,b)=>{
+    const order = {reading:0, upcoming:1, wish:2, read:3};
+    const sa = order[a.status] ?? 9, sb = order[b.status] ?? 9;
+    if(sa!==sb) return sa-sb;
+    if(a.status==='read') return (b.finishAt||0) > (a.finishAt||0) ? 1 : -1;
+    return (b.id - a.id);
+  });
+}
+function applyFilters(autoOpenModalIfEmpty=true){
   var term=document.getElementById('search-input').value.trim();
   var tagTerm=document.getElementById('tag-filter').value.trim().toLowerCase();
   var cat=document.getElementById('category-filter').value;
@@ -646,11 +573,18 @@ function applyFilters(){
     .filter(function(b){ if(term && b._score<=0) return false; if(cat && b.genre!==cat) return false; if(min && (Number(b.rating)||0) < min) return false; if(tagTerm && (b.tags||[]).map(t=>String(t).toLowerCase()).indexOf(tagTerm)===-1) return false; return true; });
 
   if(term){ list.sort((a,b)=> (b._score-a._score) || (b.id-a.id)); }
+  else if(sort==='smart'){ list = smartSort(list); }
   else if(sort==='new'){ list.sort((a,b)=> b.id-a.id); }
   else if(sort==='rating'){ list.sort((a,b)=> (Number(b.rating)||0)-(Number(a.rating)||0)); }
   else if(sort==='title'){ list.sort((a,b)=> a.title.localeCompare(b.title)); }
 
   currentBooks=list; renderBooks();
+
+  // If user typed something and there are no local matches => auto open external search modal
+  if(autoOpenModalIfEmpty && term && term.length>=3 && currentBooks.length===0){
+    openSearchModal(term,'');
+    runExternalSearch(term,'');
+  }
 }
 
 /* ===== Google Books Search + Series Finder ===== */
@@ -685,96 +619,110 @@ function volumeToItem(it){
   const seriesNumberGuess = (seriesGuess && seriesGuess.number) ? Number(seriesGuess.number) : null;
   return { id: it.id, title, authors, cover, description, categories, publishedDate, seriesGuess, seriesNumberGuess };
 }
-const searchGoogleBooks=async function(q){
-  var box=document.getElementById('book-results'); var input=document.getElementById('book-search');
-  if(!q||q.trim().length<2){ box.style.display='none'; box.innerHTML=''; lastSearchItems=[]; return; }
-  try{
-    input.classList.add('loading');
-    const data=await googleBooksSearch(q.trim(), 10);
-    input.classList.remove('loading');
-    lastSearchItems=(data.items||[]).map((it,i)=>Object.assign(volumeToItem(it), {index:i}));
-    if(!lastSearchItems.length){ box.innerHTML='<div class="chip" style="padding:8px">No results</div>'; box.style.display='block'; return; }
-    box.innerHTML=lastSearchItems.map(function(r){
-      return '<div class="head" data-pick="'+r.index+'" style="justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0"><div style="display:flex;gap:8px;align-items:center">'+
-      (r.cover?('<img src="'+escapeAttr(r.cover)+'" style="width:24px;height:36px;border-radius:4px;border:1px solid #e6ece8;object-fit:cover">'):'<div style="width:24px;height:36px;border-radius:4px;background:#e9ecef"></div>')+
-      '<div><strong>'+escapeHtml(r.title)+'</strong><div class="chip" style="margin-top:2px">'+escapeHtml(r.authors)+'</div></div></div>'+
-      ((r.categories&&r.categories.length)?('<span class="chip">'+escapeHtml(r.categories[0])+'</span>') : '')+
-      '</div>';
-    }).join('');
-    box.style.display='block';
-  }catch(e){
-    input.classList.remove('loading'); console.warn(e);
-    box.innerHTML='<div class="chip" style="padding:8px;color:#b74a4a">Search failed. Try again.</div>'; box.style.display='block';
-  }
-};
+function mapCategoriesToGenre(cats){
+  const c = (cats||[]).join(' | ').toLowerCase();
+  const picks = [
+    ['mystery','mystery'],['thriller','thriller'],['horror','horror'],['romance','romance'],
+    ['science fiction','sci-fi'],['sci-fi','sci-fi'],['fantasy','fantasy'],['young adult','young adult'],
+    ['poetry','poetry'],['graphic novel','comics/graphic novel'],['comics','comics/graphic novel'],
+    ['biography','biography'],['memoir','memoir'],['self-help','self-help'],['history','history'],
+    ['technology','technology'],['business','business'],['finance','finance'],['psychology','psychology'],
+    ['philosophy','philosophy'],['religion','spirituality/religion'],['spirituality','spirituality/religion'],
+    ['cook','cooking'],['travel','travel'],['education','education'],['health','health & fitness'],
+    ['fitness','health & fitness'],['literary','literary fiction'],['classics','classics'],
+  ];
+  for(const [needle, out] of picks){ if(c.includes(needle)) return out; }
+  if(c.includes('fiction')) return 'fiction';
+  if(c.includes('nonfiction') || c.includes('non-fiction')) return 'non-fiction';
+  return 'other';
+}
+function categoriesToTags(cats){
+  const raw = (cats||[])
+    .map(x=>String(x).split(/[\/>|,&–-]/g))
+    .flat()
+    .map(x=>x.trim().toLowerCase())
+    .filter(Boolean);
+  return Array.from(new Set(raw)).slice(0,12);
+}
 
-/* Series Finder state */
+/* ===== Search Modal (External search + series) ===== */
 let seriesCtx = { name:'', author:'', items:[], selected:new Set() };
-function openSeriesPanel(name, author){
-  const panel=document.getElementById('series-panel');
-  panel.style.display='block';
-  document.getElementById('series-name-input').value = name||'';
-  document.getElementById('series-author-input').value = author||'';
+function openSearchModal(name, author){
+  const m=document.getElementById('search-modal');
+  document.getElementById('ext-search-input').value = name||'';
+  document.getElementById('ext-search-author').value = author||'';
+  document.getElementById('search-results').innerHTML='';
+  document.getElementById('ext-watch').checked=false;
+  m.classList.add('show');
 }
-function seriesItemNumberFromTitle(title){
-  const g = parseSeriesFromTitle(title);
-  return g && g.number ? Number(g.number) : null;
-}
-function renderSeriesResults(){
-  const wrap=document.getElementById('series-results');
-  if(!seriesCtx.items.length){ wrap.innerHTML='<div class="chip" style="padding:8px">No titles found for this series.</div>'; return; }
+function closeSearchModal(){ document.getElementById('search-modal').classList.remove('show'); }
+function renderExternalResults(){
+  const wrap=document.getElementById('search-results');
+  if(!seriesCtx.items.length){ wrap.innerHTML='<div class="chip" style="padding:8px">No results</div>'; return; }
   wrap.innerHTML = seriesCtx.items.map((it,idx)=>{
     const checked = seriesCtx.selected.has(idx) ? 'checked' : '';
     const n = (it.seriesNumberGuess!=null) ? ` #${it.seriesNumberGuess}` : '';
     const rd = it.publishedDate ? ` • ${escapeHtml(it.publishedDate)}` : '';
     return `
-      <div class="head" style="align-items:center;border-bottom:1px solid #eee;padding:6px 0" data-sidx="${idx}">
-        <input type="checkbox" class="series-check" data-sidx="${idx}" ${checked} style="width:18px;height:18px;margin-right:6px">
-        ${it.cover?`<img src="${escapeAttr(it.cover)}" style="width:28px;height:42px;border-radius:4px;border:1px solid #e6ece8;object-fit:cover;margin-right:8px">`:`<div style="width:28px;height:42px;border-radius:4px;background:#e9ecef;margin-right:8px"></div>`}
+      <div class="result-row" data-sidx="${idx}">
+        <input type="checkbox" class="ext-check" data-sidx="${idx}" ${checked} style="width:18px;height:18px;margin:8px 6px 0 0">
+        ${it.cover?`<img src="${escapeAttr(it.cover)}" style="width:36px;height:54px;border-radius:4px;border:1px solid #e6ece8;object-fit:cover;margin-right:8px">`:`<div style="width:36px;height:54px;border-radius:4px;background:#e9ecef;margin-right:8px"></div>`}
         <div style="flex:1 1 auto">
           <strong>${escapeHtml(it.title)}</strong>
           <div class="chip" style="margin-top:2px">${escapeHtml(it.authors||'')}</div>
-          <div class="chip" style="margin-top:2px">Series: ${escapeHtml(seriesCtx.name||'(unknown)')}${n}${rd}</div>
+          <div class="chip" style="margin-top:2px">${it.seriesGuess? 'Series: '+escapeHtml(it.seriesGuess.name)+n : 'Standalone?' }${rd}</div>
         </div>
+        <button class="action" data-one-add="${idx}" type="button">Add</button>
       </div>
     `;
   }).join('');
 }
-async function findSeries(name, author){
+async function runExternalSearch(name, author){
   seriesCtx.name = (name||'').trim();
   seriesCtx.author = (author||'').trim();
-  if(!seriesCtx.name){ renderSeriesResults(); return; }
-  let q = `intitle:"${seriesCtx.name}"`;
-  if(seriesCtx.author) q += ` inauthor:"${seriesCtx.author}"`;
+  let q = seriesCtx.name;
+  if(seriesCtx.author) q += ` ${seriesCtx.author}`;
+  if(!q){ renderExternalResults(); return; }
   try{
     const data = await googleBooksSearch(q, 40);
     const items = (data.items||[]).map(volumeToItem);
+
+    // Auto-detect top series in results for the "watch" and releases buttons
+    const names = items.map(x=>x.seriesGuess && x.seriesGuess.name).filter(Boolean);
+    if(names.length){
+      const counts = {}; names.forEach(n=>counts[n]=(counts[n]||0)+1);
+      const top = Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+      seriesCtx.name = top;
+      document.getElementById('ext-search-input').value = top;
+    }
+
+    // Narrow to likely series entries first
     const filtered = items.filter(it=>{
       if(!it.title) return false;
-      const t = it.title.toLowerCase();
-      const hit = t.includes(seriesCtx.name.toLowerCase());
-      return hit || !!it.seriesGuess;
-    });
-    filtered.sort((a,b)=>{
+      if(seriesCtx.name){
+        const t = it.title.toLowerCase();
+        return t.includes(seriesCtx.name.toLowerCase()) || !!it.seriesGuess;
+      }
+      return true;
+    }).sort((a,b)=>{
       const an=a.seriesNumberGuess, bn=b.seriesNumberGuess;
       if(an!=null && bn!=null) return an-bn;
       if(an!=null) return -1;
       if(bn!=null) return 1;
       return a.title.localeCompare(b.title);
     });
+
     seriesCtx.items = filtered;
-    seriesCtx.selected = new Set(filtered.map((_,i)=>i)); // preselect all
-    renderSeriesResults();
-  }catch(e){
-    console.warn(e); showToast('Series search failed', true);
-  }
+    seriesCtx.selected = new Set(filtered.map((_,i)=>i)); // preselect
+    renderExternalResults();
+  }catch(e){ console.warn(e); showToast('Search failed', true); }
 }
-function addSelectedSeriesToWish(){
+function addSelectedExternalToWish(){
   const chosen = Array.from(seriesCtx.selected).map(i=>seriesCtx.items[i]);
   if(!chosen.length){ showToast('Select at least one book', true); return; }
   const now = new Date();
-  const name = seriesCtx.name;
-  const author = seriesCtx.author;
+  const name = (seriesCtx.name||'').trim();
+  const author = (seriesCtx.author||'').trim();
   chosen.forEach(it=>{
     const releaseDateObj = toDateObj(it.publishedDate);
     const isFuture = releaseDateObj && releaseDateObj.getTime() > now.getTime();
@@ -783,17 +731,17 @@ function addSelectedSeriesToWish(){
       author: it.authors || author,
       image: it.cover||'',
       synopsis: it.description||'',
-      genre: 'other',
-      tags: [],
+      genre: mapCategoriesToGenre(it.categories),
+      tags: categoriesToTags(it.categories),
       status: isFuture? 'upcoming' : 'wish',
       releaseDate: isFuture? releaseDateObj.toISOString().slice(0,10): '',
-      series: { name, number: (it.seriesNumberGuess!=null? String(it.seriesNumberGuess): '') },
+      series: it.seriesGuess? { name: it.seriesGuess.name, number: (it.seriesNumberGuess!=null? String(it.seriesNumberGuess): '') } : (name? {name, number:''}: null),
       rating: 0
     });
     books.unshift(b);
   });
-  saveAll(); populateTagFilter(); applyFilters(); renderMyLists(); updateStats();
-  showToast('Added '+chosen.length+' book(s) to Want to Read');
+  saveAll(); populateTagFilter(); applyFilters(false); updateStats();
+  showToast('Added '+chosen.length+' to Want to Read');
 }
 
 /* ===== Export / Import ===== */
@@ -813,14 +761,14 @@ function importJson(file){
       var data=JSON.parse(fr.result);
       if(data.books) books=data.books;
       if(data.sitePrefs) sitePrefs=Object.assign({watchSeries:{}}, data.sitePrefs);
-      saveAll(); populateTagFilter(); applyFilters(); renderMyLists(); updateStats();
+      saveAll(); populateTagFilter(); applyFilters(); updateStats();
       showToast('Import complete');
     }catch(e){ showToast('Invalid JSON',true); }
   };
   fr.readAsText(file);
 }
 
-/* ===== Modal / Rating (half-star) ===== */
+/* ===== Modal / Rating (Finish & Rate) ===== */
 let ratingDraft = 0; let finishContext=null;
 function bindStarHit(elFg, elHit, feedbackEl){
   function setFromIndex(i){ const r = (i+1)/2; ratingDraft = r; elFg.style.width = starWidthFromRating(r); if(feedbackEl) feedbackEl.textContent = r.toFixed(1)+'★'; }
@@ -837,7 +785,7 @@ function openFinishModal(book){
   fg.style.width=starWidthFromRating(ratingDraft);
   document.getElementById('finish-modal').classList.add('show');
 }
-function closeFinishModal(){ document.getElementById('finish-modal').classList.remove('show'); finishContext=null; }
+function closeFinishModal(){ document.getElementById('finish-modal').classList.remove('show'); finishContext=null; ratingDraft=0; }
 
 /* ===== Watch / Releases ===== */
 async function checkSeriesReleases(name, author){
@@ -851,7 +799,8 @@ async function checkSeriesReleases(name, author){
     const upcoming = items
       .map(it=>{
         const dt=toDateObj(it.publishedDate);
-        const n=seriesItemNumberFromTitle(it.title);
+        const g=parseSeriesFromTitle(it.title);
+        const n=g && g.number? Number(g.number): null;
         return {title:it.title, authors:it.authors, date:dt, number:n};
       })
       .filter(x=>x.date && x.date.getTime()>now.getTime())
@@ -874,7 +823,7 @@ async function checkWatchedReleases(){
 
 /* ===== Boot / Events ===== */
 document.addEventListener('DOMContentLoaded', function(){
-  // Build a minimal manifest (no service worker)
+  // Minimal manifest (no SW)
   try{
     const manifest={name:'PlotLine',short_name:'PlotLine',start_url:'./',display:'standalone',background_color:'#ffffff',theme_color:'#2f4a3e',icons:[{src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAAAAABQFZ1hAAAAC0lEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAB4p1nNAAE=',sizes:'192x192',type:'image/png'}]};
     const blob=new Blob([JSON.stringify(manifest)],{type:'application/manifest+json'});
@@ -882,113 +831,61 @@ document.addEventListener('DOMContentLoaded', function(){
     const link=document.getElementById('app-manifest'); if(link) link.href=url;
   }catch(_e){}
 
-  // Initial data load & UI
   loadAll().then(function(){
     populateCategoryOptions();
     populateTagFilter();
-    applyFilters();
-    renderMyLists();
+    applyFilters(false);
     updateStats();
-    updateCloudInputsUI();
     checkWatchedReleases();
   });
 
   // Nav
-  document.getElementById('feed-btn').addEventListener('click', function(){ openSection('feed'); applyFilters(); });
-  document.getElementById('add-btn').addEventListener('click', function(){ openSection('add'); });
-  document.getElementById('my-books-btn').addEventListener('click', function(){ openSection('my-books'); renderMyLists(); });
+  document.getElementById('feed-btn').addEventListener('click', function(){ openSection('feed'); applyFilters(false); });
   document.getElementById('prefs-btn').addEventListener('click', function(){ openSection('prefs'); });
 
   // Filters
-  document.getElementById('search-input').addEventListener('input', applyFilters);
-  document.getElementById('tag-filter').addEventListener('change', applyFilters);
-  document.getElementById('category-filter').addEventListener('change', applyFilters);
-  document.getElementById('min-rating').addEventListener('change', applyFilters);
-  document.getElementById('sort-by').addEventListener('change', applyFilters);
+  document.getElementById('search-input').addEventListener('input', function(){ applyFilters(true); });
+  document.getElementById('tag-filter').addEventListener('change', function(){ applyFilters(false); });
+  document.getElementById('category-filter').addEventListener('change', function(){ applyFilters(false); });
+  document.getElementById('min-rating').addEventListener('change', function(){ applyFilters(false); });
+  document.getElementById('sort-by').addEventListener('change', function(){ applyFilters(false); });
   document.getElementById('collapse-all').addEventListener('change', renderBooks);
 
   // Check releases from feed
   document.getElementById('check-releases-btn').addEventListener('click', checkWatchedReleases);
 
-  // Google Books (typeahead)
-  let debounceT=null;
-  document.getElementById('book-search').addEventListener('input',function(e){
-    clearTimeout(debounceT); debounceT=setTimeout(function(){searchGoogleBooks(e.target.value);},300);
+  /* Search modal controls */
+  document.getElementById('ext-search-btn').addEventListener('click', function(){
+    runExternalSearch(document.getElementById('ext-search-input').value, document.getElementById('ext-search-author').value);
   });
-  document.addEventListener('click',function(e){
-    var pick=e.target.closest && e.target.closest('[data-pick]');
-    if(pick){
-      var i=Number(pick.getAttribute('data-pick')); var it=lastSearchItems[i]; if(!it) return;
-      document.getElementById('title').value=it.title;
-      document.getElementById('author').value=it.authors;
-      document.getElementById('book-image').value=it.cover||'';
-      document.getElementById('synopsis').value=it.description||'';
-      var t=it.categories||[]; document.getElementById('tag-input').value = t.join(', ');
-      document.getElementById('book-results').style.display='none';
-
-      // Open Series Finder with a guess
-      const guess = it.seriesGuess;
-      openSeriesPanel(guess? guess.name : '', it.authors||'');
-      if(guess && guess.name){ findSeries(guess.name, it.authors||''); }
-    }
+  document.getElementById('ext-select-all').addEventListener('click', function(){
+    seriesCtx.selected = new Set(seriesCtx.items.map((_,i)=>i)); renderExternalResults();
   });
-  var bs=document.getElementById('book-search'); if(bs){ bs.addEventListener('keydown',function(e){ if((e.key||'')==='Enter'){ e.preventDefault(); }}); }
-
-  // Add form rating widget
-  (function initAddRating(){ var fg=document.querySelector('#rating-stars .fg'); var hit=document.getElementById('rating-hit'); bindStarHit(fg,hit,document.getElementById('rating-feedback')); })();
-
-  // Add book form
-  document.getElementById('book-form').addEventListener('submit', function(e){
-    e.preventDefault();
-    var title=document.getElementById('title').value.trim(), author=document.getElementById('author').value.trim();
-    if(!title||!author){ showToast('Title and author are required.',true); return; }
-    var genre=document.getElementById('genre').value;
-    var image=document.getElementById('book-image').value.trim();
-    var synopsis=document.getElementById('synopsis').value.trim();
-    var tags=(document.getElementById('tag-input').value||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
-    var status=document.getElementById('initial-status').value;
-
-    const guess=parseSeriesFromTitle(title);
-    const releaseDate = '';
-    var b=newBook({title,author,genre,image,synopsis,tags,status,rating:ratingDraft, series: guess? {name:guess.name, number:guess.number} : null, releaseDate});
-    if(ratingDraft>0 && status==='read'){ b.rating=ratingDraft; if(b.sessions.length){ b.sessions[b.sessions.length-1].rating=ratingDraft; } }
-    books.unshift(b); saveAll(); populateTagFilter(); applyFilters(); renderMyLists(); updateStats();
-    this.reset(); ratingDraft=0; document.querySelector('#rating-stars .fg').style.width='0%'; document.getElementById('rating-feedback').textContent='Click stars (supports ½★)';
-    showToast('Book saved');
-  });
-
-  // Series Finder events
-  document.getElementById('series-search-btn').addEventListener('click', function(){
-    const name=document.getElementById('series-name-input').value;
-    const author=document.getElementById('series-author-input').value;
-    openSeriesPanel(name, author);
-    findSeries(name, author);
-  });
-  document.getElementById('series-select-all').addEventListener('click', function(){
-    seriesCtx.selected = new Set(seriesCtx.items.map((_,i)=>i));
-    renderSeriesResults();
-  });
-  document.getElementById('series-add-selected').addEventListener('click', addSelectedSeriesToWish);
-  document.getElementById('series-check-releases').addEventListener('click', async function(){
-    const name=document.getElementById('series-name-input').value.trim();
-    const author=document.getElementById('series-author-input').value.trim();
+  document.getElementById('ext-add-selected').addEventListener('click', addSelectedExternalToWish);
+  document.getElementById('ext-close').addEventListener('click', closeSearchModal);
+  document.getElementById('ext-check-releases').addEventListener('click', async function(){
+    const name=document.getElementById('ext-search-input').value.trim();
+    const author=document.getElementById('ext-search-author').value.trim();
     const up = await checkSeriesReleases(name, author);
     if(!up.length) { showToast('No upcoming releases detected'); return; }
     showToast(`Next release: ${escapeHtml(up[0].title)} on ${formatDate(up[0].date)}`);
   });
-  document.getElementById('series-results').addEventListener('click', function(e){
-    const cb = e.target.closest('.series-check');
-    if(!cb) return;
-    const i=Number(cb.getAttribute('data-sidx'));
-    if(cb.checked) seriesCtx.selected.add(i); else seriesCtx.selected.delete(i);
-  });
-  document.getElementById('series-watch').addEventListener('change', function(e){
-    const name=document.getElementById('series-name-input').value.trim();
-    const author=document.getElementById('series-author-input').value.trim();
+  document.getElementById('ext-watch').addEventListener('change', function(e){
+    const name=document.getElementById('ext-search-input').value.trim();
+    const author=document.getElementById('ext-search-author').value.trim();
     if(!name){ showToast('Enter a series name to watch', true); e.target.checked=false; return; }
     if(e.target.checked){ sitePrefs.watchSeries[name]=author||''; showToast('Watching "'+name+'"'); }
     else { delete sitePrefs.watchSeries[name]; showToast('Stopped watching "'+name+'"'); }
     saveAll();
+  });
+  document.getElementById('search-results').addEventListener('click', function(e){
+    const cb = e.target.closest('.ext-check');
+    if(cb){ const i=Number(cb.getAttribute('data-sidx')); if(cb.checked) seriesCtx.selected.add(i); else seriesCtx.selected.delete(i); return; }
+    const btn = e.target.closest('[data-one-add]');
+    if(btn){
+      const i=Number(btn.getAttribute('data-one-add'));
+      seriesCtx.selected=new Set([i]); addSelectedExternalToWish();
+    }
   });
 
   // Feed actions
@@ -999,43 +896,58 @@ document.addEventListener('DOMContentLoaded', function(){
 
     if(action==='toggle-synopsis'){
       var id=bookId; var wrap=document.querySelector('.syn[data-syn="'+id+'"]'); if(!wrap) return; var span=wrap.querySelector('.syn-text'); if(!span) return;
-      var expanded=span.getAttribute('data-expanded')==='true'; var full=(findBook(id).synopsis||'');
+      var b=findBook(id); var full=(b && b.synopsis)||''; var expanded=span.getAttribute('data-expanded')==='true';
       if(expanded){ span.textContent=(full.length>280? full.slice(0,279)+'…' : full); span.setAttribute('data-expanded','false'); btn.textContent='Read more'; }
       else{ span.textContent=full; span.setAttribute('data-expanded','true'); btn.textContent='Show less'; }
       return;
     }
-    if(action==='wish'){ var b=findBook(bookId); if(!b) return; setWish(b); saveAll(); applyFilters(); renderMyLists(); updateStats(); showToast('Moved to Want to Read'); return; }
-    if(action==='reading'){ var b2=findBook(bookId); if(!b2) return; startReading(b2); saveAll(); applyFilters(); renderMyLists(); updateStats(); showToast('Marked as Currently Reading'); return; }
+    if(action==='wish'){ var b=findBook(bookId); if(!b) return; setWish(b); saveAll(); applyFilters(false); updateStats(); showToast('Moved to Want to Read'); return; }
+    if(action==='reading'){ var b2=findBook(bookId); if(!b2) return; startReading(b2); saveAll(); applyFilters(false); updateStats(); showToast('Marked as Currently Reading'); return; }
     if(action==='finish'){ var b3=findBook(bookId); if(!b3) return; openFinishModal(b3); return; }
-    if(action==='edit'){ var b4=findBook(bookId); if(!b4) return; var t=prompt('Edit title:', b4.title); if(t==null) return; b4.title=t.trim()||b4.title; var a=prompt('Edit author:', b4.author); if(a==null) return; b4.author=a.trim()||b4.author; saveAll(); applyFilters(); renderMyLists(); updateStats(); return; }
-    if(action==='delete'){ if(!confirm('Delete this book?')) return; books = books.filter(x=>String(x.id)!==String(bookId)); saveAll(); applyFilters(); renderMyLists(); updateStats(); showToast('Deleted'); return; }
+    if(action==='edit'){ var b4=findBook(bookId); if(!b4) return; var t=prompt('Edit title:', b4.title); if(t==null) return; b4.title=t.trim()||b4.title; var a=prompt('Edit author:', b4.author); if(a==null) return; b4.author=a.trim()||b4.author; saveAll(); applyFilters(false); updateStats(); return; }
+    if(action==='delete'){ if(!confirm('Delete this book?')) return; books = books.filter(x=>String(x.id)!==String(bookId)); saveAll(); applyFilters(false); updateStats(); showToast('Deleted'); return; }
     if(action==='find-next'){
       var cur=findBook(bookId); if(!cur || !cur.series || !cur.series.name){ showToast('No series info on this book', true); return; }
       (async ()=>{
-        await findSeries(cur.series.name, cur.author||'');
-        const currentNum = Number(cur.series.number||0);
-        const candidate = seriesCtx.items.find(it => it.seriesNumberGuess!=null && it.seriesNumberGuess>currentNum);
-        if(!candidate){ showToast('Couldn’t find the next volume'); return; }
-        seriesCtx.selected=new Set([seriesCtx.items.indexOf(candidate)]);
-        addSelectedSeriesToWish();
+        openSearchModal(cur.series.name, cur.author||'');
+        await runExternalSearch(cur.series.name, cur.author||'');
+        // preselect first volume with higher number
+        const cn = Number(cur.series.number||0);
+        const idx = seriesCtx.items.findIndex(it => it.seriesNumberGuess!=null && it.seriesNumberGuess>cn);
+        if(idx>-1){ seriesCtx.selected = new Set([idx]); renderExternalResults(); }
       })();
+      return;
+    }
+    if(action==='find-like'){
+      var b5=findBook(bookId); if(!b5) return;
+      const q = (b5.tags&&b5.tags.length)? b5.tags.slice(0,3).join(' ') : `${b5.title} ${b5.author}`;
+      openSearchModal(q, '');
+      runExternalSearch(q,'');
       return;
     }
   });
 
   // Finish modal
-  document.getElementById('finish-save').addEventListener('click', function(){
+  function saveFinish(){
     try{
       if(!finishContext){ closeFinishModal(); return; }
       var book=books.find(b=>b.id===finishContext.bookId);
       if(!book){ closeFinishModal(); return; }
       finishReading(book, ratingDraft||book.rating||0);
-      saveAll(); closeFinishModal(); renderMyLists(); applyFilters(); updateStats(); showToast('Marked as read!');
+      book.status='read';
+      saveAll(); closeFinishModal(); applyFilters(false); updateStats(); showToast('Marked as read!');
     }catch(e){ console.warn(e); closeFinishModal(); showToast('Saved locally. If something looks off, refresh.',true); }
-  });
+  }
+  document.getElementById('finish-save').addEventListener('click', saveFinish);
   document.getElementById('finish-cancel').addEventListener('click', closeFinishModal);
-  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && document.getElementById('finish-modal').classList.contains('show')) closeFinishModal(); });
-  document.addEventListener('click',function(e){ var m=document.getElementById('finish-modal'); if(!m || !m.classList.contains('show')) return; if(!m.contains(e.target)) closeFinishModal(); });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape' && document.getElementById('finish-modal').classList.contains('show')) closeFinishModal();
+    if(e.key==='Enter' && document.getElementById('finish-modal').classList.contains('show')) saveFinish();
+  });
+  document.addEventListener('click',function(e){
+    var m=document.getElementById('finish-modal'); if(!m || !m.classList.contains('show')) return;
+    if(!m.contains(e.target) && !e.target.closest('#finish-modal')) closeFinishModal();
+  });
 
   // Goals
   function loadGoalsUI(){
@@ -1064,13 +976,11 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('import-json').addEventListener('change', function(e){ var f=e.target.files && e.target.files[0]; if(f) importJson(f); e.target.value=''; });
 
   // Cloud controls
-  updateCloudInputsUI();
   document.getElementById('cloud-save').addEventListener('click', function(){
     const key = (document.getElementById('cloud-api').value||'').trim();
     const bin = (document.getElementById('cloud-bin').value||'').trim();
     if(key){ localStorage.setItem('plotline_api_key', key); }
     if(bin){ localStorage.setItem('plotline_bin_id', bin); }
-    updateCloudInputsUI();
     showToast('Cloud settings saved');
   });
   document.getElementById('cloud-create').addEventListener('click', cloudCreate);
@@ -1083,8 +993,6 @@ function openSection(id){
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   if(id==='feed') document.getElementById('feed-btn').classList.add('active');
-  if(id==='add') document.getElementById('add-btn').classList.add('active');
-  if(id==='my-books') document.getElementById('my-books-btn').classList.add('active');
   if(id==='prefs') document.getElementById('prefs-btn').classList.add('active');
 }
 </script>
