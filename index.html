@@ -859,7 +859,7 @@ async function performSearch(){
     document.getElementById('search-results').innerHTML = '<div class="loading"></div>';
     
     const data = await searchGoogleBooks(query);
-    searchResults = (data.items || []).map(item => {
+    let rawResults = (data.items || []).map(item => {
       const info = item.volumeInfo || {};
       const series = parseSeriesFromTitle(info.title);
       
@@ -877,14 +877,46 @@ async function performSearch(){
       };
     });
     
-    // Sort by popularity (ratings * average)
-    searchResults.sort((a, b) => {
-      const aScore = (a.averageRating || 0) * (a.ratingsCount || 0);
-      const bScore = (b.averageRating || 0) * (b.ratingsCount || 0);
-      return bScore - aScore;
-    });
+    // Better deduplication by title and author similarity
+    const deduplicated = [];
+    const seen = new Map();
     
-    selectedResults = new Set(searchResults.map((_, i) => i));
+    for(const result of rawResults) {
+      const normalizedTitle = result.title.toLowerCase()
+        .replace(/[^\w\s]/g, '') // Remove punctuation
+        .replace(/\s+/g, ' ')    // Normalize spaces
+        .trim();
+      const normalizedAuthor = result.authors.toLowerCase().trim();
+      
+      const key = `${normalizedTitle}::${normalizedAuthor}`;
+      
+      if(!seen.has(key)) {
+        seen.set(key, result);
+        deduplicated.push(result);
+      } else {
+        // Keep the one with better rating data
+        const existing = seen.get(key);
+        if((result.ratingsCount || 0) > (existing.ratingsCount || 0)) {
+          const index = deduplicated.findIndex(r => r === existing);
+          if(index >= 0) {
+            deduplicated[index] = result;
+            seen.set(key, result);
+          }
+        }
+      }
+    }
+    
+    searchResults = deduplicated
+      // Sort by popularity (ratings * average)
+      .sort((a, b) => {
+        const aScore = (a.averageRating || 0) * (a.ratingsCount || 0);
+        const bScore = (b.averageRating || 0) * (b.ratingsCount || 0);
+        return bScore - aScore;
+      })
+      // Limit to top 15 results
+      .slice(0, 15);
+    
+    selectedResults = new Set(); // Don't auto-select anything
     renderSearchResults();
     
   } catch(error) {
