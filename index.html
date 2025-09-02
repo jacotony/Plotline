@@ -987,7 +987,57 @@ function cleanTags(categories) {
   // Convert to array and limit
   return Array.from(extractedTags).slice(0, 8);
 }
-async function searchGoogleBooks(query, maxResults = 20){
+async function searchGoogleBooks(rawQuery, maxResults = 20){
+  // Genre-agnostic: build a precise query that boosts title/author but doesn't force subjects
+  const raw = String(rawQuery || '').trim();
+
+  // Build a boosted title phrase (strip inauthor: from the boost only)
+  const titleOnly = raw.replace(/\binauthor:\s*("[^"]+"|[^\s]+)/ig, '').trim();
+  const titleBoost = titleOnly
+    ? (/\s/.test(titleOnly) ? `"${titleOnly}" OR intitle:"${titleOnly}"` : `intitle:${titleOnly}`)
+    : '';
+
+  // Clean out noisy study-guide style results
+  const minus = [
+    '-intitle:"study guide"', '-intitle:"teacher guide"', '-intitle:"summary"',
+    '-subject:drama', '-subject:poetry'
+  ].join(' ');
+
+  const q = [raw, titleBoost, minus].filter(Boolean).join(' ').trim();
+
+  const params = new URLSearchParams({
+    q,
+    maxResults: String(maxResults),
+    printType: 'books',
+    orderBy: 'relevance',
+    langRestrict: 'en',
+    fields:
+      'items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/description,volumeInfo/categories,' +
+      'volumeInfo/imageLinks/thumbnail,volumeInfo/imageLinks/smallThumbnail,volumeInfo/publishedDate,' +
+      'volumeInfo/averageRating,volumeInfo/ratingsCount,volumeInfo/language,volumeInfo/pageCount),' +
+      'totalItems'
+  });
+
+  let response = await fetch(`${GBOOKS_API}?${params.toString()}`);
+  if (!response.ok) {
+    // Fallback without fields (Google occasionally tweaks schema)
+    const fb = new URLSearchParams({
+      q,
+      maxResults: String(maxResults),
+      printType: 'books',
+      orderBy: 'relevance',
+      langRestrict: 'en'
+    });
+    response = await fetch(`${GBOOKS_API}?${fb.toString()}`);
+    if (!response.ok) {
+      const txt = await response.text().catch(()=> '');
+      throw new Error(`Search failed (${response.status}). ${txt.slice(0,120)}`);
+    }
+  }
+  return await response.json();
+}
+async function performSearch(){
+
   // Focus search on books only, exclude periodicals and articles
   const bookQuery = `${query} inpublisher:books OR subject:fiction OR subject:literature -inpublisher:newspaper -inpublisher:magazine -inpublisher:journal -inpublisher:periodical`;
 
