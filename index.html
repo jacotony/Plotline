@@ -77,7 +77,7 @@
   .group-count{background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:0.85rem;font-weight:700}
   .books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
 
-  .book-card{border:2px solid var(--line);border-radius:16px;padding:20px;background:#fff;box-shadow:var(--shadow);transition:all 0.3s ease;position:relative;overflow:hidden}
+  .book-card{border:2px solid var(--line);border-radius:16px;padding:20px;background:#fff;box-shadow:var(--shadow);transition:all 0.3s ease;position:relative;overflow:visible}
   .book-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover);border-color:var(--accent)}
 
   .book-header{display:flex;gap:16px;margin-bottom:16px}
@@ -122,7 +122,7 @@
   .more-menu{position:relative}
   .more-btn{width:36px;height:36px;border-radius:50%;background:var(--paper);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s ease}
   .more-btn:hover{background:var(--line);border-color:var(--accent)}
-  .dropdown{position:absolute;top:100%;right:0;background:#fff;border:2px solid var(--line);border-radius:12px;box-shadow:var(--shadow-hover);padding:8px 0;min-width:160px;z-index:1000;opacity:0;visibility:hidden;transform:translateY(-10px);transition:all 0.2s ease}
+  .dropdown{position:absolute;top:100%;right:0;background:#fff;border:2px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:8px 0;min-width:160px;z-index:2000;opacity:0;visibility:hidden;transform:translateY(-10px);transition:all 0.2s ease}
   .dropdown.show{opacity:1;visibility:visible;transform:translateY(0)}
   .dropdown.left{right:auto;left:-120px}
   .dropdown-item{display:block;padding:12px 16px;color:var(--ink);text-decoration:none;font-size:14px;font-weight:500;border:none;background:none;width:100%;text-align:left;cursor:pointer;transition:background 0.2s ease;white-space:nowrap}
@@ -851,16 +851,49 @@ function mapGenre(categories){
 function cleanTags(categories) {
   if(!categories || !categories.length) return [];
   
-  // Clean and normalize tags
-  const cleaned = categories
-    .flatMap(cat => cat.split(/[\/\-|&,]/)) // Split on common delimiters
-    .map(tag => tag.trim().toLowerCase())
-    .filter(tag => tag.length > 2 && tag.length < 20) // Reasonable length
-    .filter(tag => !tag.includes('fiction') && !tag.includes('non-fiction')) // Remove generic terms
-    .filter(tag => !/^\d+$/.test(tag)) // Remove pure numbers
-    .slice(0, 6); // Limit to 6 tags max
+  // Much better tag extraction and cleaning
+  const stopWords = new Set(['fiction', 'nonfiction', 'non-fiction', 'books', 'literature', 'general', 'juvenile', 'adult', 'ages', 'grade', 'book']);
   
-  return [...new Set(cleaned)]; // Remove duplicates
+  const cleaned = categories
+    .flatMap(cat => {
+      // Split on various delimiters and extract meaningful parts
+      return cat.split(/[\/\-|&,>]+/)
+        .map(part => part.trim().toLowerCase())
+        .filter(part => part.length > 2 && part.length < 25)
+        .filter(part => !stopWords.has(part))
+        .filter(part => !/^\d+$/.test(part)) // No pure numbers
+        .filter(part => !/^(the|and|or|of|in|at|by|for|with|to)$/.test(part)) // No articles/prepositions
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+  
+  // Add some intelligent genre-based tags
+  const fullText = categories.join(' ').toLowerCase();
+  const smartTags = [];
+  
+  if(fullText.includes('mystery') || fullText.includes('detective')) smartTags.push('mystery');
+  if(fullText.includes('romance')) smartTags.push('romance');  
+  if(fullText.includes('fantasy')) smartTags.push('fantasy');
+  if(fullText.includes('science fiction') || fullText.includes('sci-fi')) smartTags.push('sci-fi');
+  if(fullText.includes('thriller')) smartTags.push('thriller');
+  if(fullText.includes('horror')) smartTags.push('horror');
+  if(fullText.includes('biography')) smartTags.push('biography');
+  if(fullText.includes('history')) smartTags.push('history');
+  if(fullText.includes('philosophy')) smartTags.push('philosophy');
+  if(fullText.includes('psychology')) smartTags.push('psychology');
+  if(fullText.includes('business')) smartTags.push('business');
+  if(fullText.includes('self-help') || fullText.includes('self help')) smartTags.push('self-help');
+  if(fullText.includes('memoir')) smartTags.push('memoir');
+  if(fullText.includes('true crime')) smartTags.push('true-crime');
+  if(fullText.includes('cookbook') || fullText.includes('cooking')) smartTags.push('cooking');
+  if(fullText.includes('travel')) smartTags.push('travel');
+  if(fullText.includes('religion') || fullText.includes('spiritual')) smartTags.push('spiritual');
+  if(fullText.includes('health') || fullText.includes('fitness')) smartTags.push('health');
+  if(fullText.includes('parenting')) smartTags.push('parenting');
+  
+  // Combine and deduplicate
+  const allTags = [...new Set([...cleaned, ...smartTags])];
+  return allTags.slice(0, 6);
 }
 
 async function searchGoogleBooks(query, maxResults = 20){
@@ -1266,8 +1299,7 @@ function handleBookAction(action, bookId){
       break;
       
     case 'find-similar':
-      const query = book.tags?.length ? book.tags.slice(0, 2).join(' ') : book.title;
-      openSearchModal(query);
+      findSimilarBooks(book);
       break;
       
     case 'share':
@@ -1320,6 +1352,66 @@ function copyToClipboard(text){
   }).catch(() => {
     showToast('Could not copy to clipboard', true);
   });
+}
+
+function findSimilarBooks(book) {
+  // Build a smarter search query based on multiple factors
+  let searchTerms = [];
+  
+  // Use the best available tags
+  if(book.tags && book.tags.length > 0) {
+    const bestTags = book.tags.filter(tag => 
+      !['other', 'general', 'book', 'books'].includes(tag) &&
+      tag.length > 3
+    ).slice(0, 3);
+    searchTerms.push(...bestTags);
+  }
+  
+  // Add genre if it's specific
+  if(book.genre && book.genre !== 'other' && book.genre !== 'fiction') {
+    searchTerms.push(book.genre.replace(/-/g, ' '));
+  }
+  
+  // Add author for "more by this author" results
+  if(book.author && !book.author.toLowerCase().includes('unknown')) {
+    searchTerms.push(`inauthor:"${book.author}"`);
+  }
+  
+  // If we don't have good tags, try extracting themes from the title
+  if(searchTerms.length < 2 && book.title) {
+    const titleWords = book.title.toLowerCase()
+      .split(/\s+/)
+      .filter(word => 
+        word.length > 4 && 
+        !['book', 'novel', 'story', 'tales', 'guide'].includes(word)
+      );
+    if(titleWords.length > 0) {
+      searchTerms.push(titleWords[0]);
+    }
+  }
+  
+  // Fallback to genre-based search
+  if(searchTerms.length === 0) {
+    const genreSearches = {
+      'mystery': 'mystery detective crime',
+      'thriller': 'thriller suspense',
+      'romance': 'romance love',
+      'fantasy': 'fantasy magic',
+      'sci-fi': 'science fiction',
+      'horror': 'horror scary',
+      'biography': 'biography memoir',
+      'history': 'history historical',
+      'business': 'business entrepreneurship',
+      'self-help': 'self-help personal development',
+      'philosophy': 'philosophy ethics'
+    };
+    searchTerms.push(genreSearches[book.genre] || book.genre || 'fiction');
+  }
+  
+  const finalQuery = searchTerms.slice(0, 4).join(' ');
+  
+  openSearchModal(finalQuery);
+  showToast(`Searching for books similar to "${book.title}"...`);
 }
 
 function toggleSynopsis(bookId){
