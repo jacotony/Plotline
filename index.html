@@ -122,10 +122,10 @@
   .more-menu{position:relative}
   .more-btn{width:36px;height:36px;border-radius:50%;background:var(--paper);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s ease}
   .more-btn:hover{background:var(--line);border-color:var(--accent)}
-  .dropdown{position:absolute;top:100%;right:0;background:#fff;border:2px solid var(--line);border-radius:12px;box-shadow:var(--shadow-hover);padding:8px 0;min-width:150px;z-index:1000;opacity:0;visibility:hidden;transform:translateY(-10px);transition:all 0.2s ease}
+  .dropdown{position:absolute;top:100%;right:0;background:#fff;border:2px solid var(--line);border-radius:12px;box-shadow:var(--shadow-hover);padding:8px 0;min-width:160px;z-index:1000;opacity:0;visibility:hidden;transform:translateY(-10px);transition:all 0.2s ease}
   .dropdown.show{opacity:1;visibility:visible;transform:translateY(0)}
-  .dropdown.left{right:auto;left:0}
-  .dropdown-item{display:block;padding:10px 16px;color:var(--ink);text-decoration:none;font-size:14px;font-weight:500;border:none;background:none;width:100%;text-align:left;cursor:pointer;transition:background 0.2s ease}
+  .dropdown.left{right:auto;left:-120px}
+  .dropdown-item{display:block;padding:12px 16px;color:var(--ink);text-decoration:none;font-size:14px;font-weight:500;border:none;background:none;width:100%;text-align:left;cursor:pointer;transition:background 0.2s ease;white-space:nowrap}
   .dropdown-item:hover{background:var(--paper-2)}
 
   .toast{position:fixed;bottom:24px;right:24px;background:#2a2a2a;color:#fff;padding:16px 20px;border-radius:12px;opacity:0;transform:translateY(20px);transition:all 0.3s ease;pointer-events:none;z-index:9999;max-width:400px;box-shadow:var(--shadow-hover);font-weight:500}
@@ -259,6 +259,12 @@
       </section>
 
       <section id="prefs" class="section">
+        <div class="prefs-section">
+          <h3 class="prefs-title">Watched Series</h3>
+          <p style="margin-bottom:16px;color:var(--muted);font-size:14px;">Series you're watching for new releases</p>
+          <div id="watched-series-list" style="margin-bottom:16px;"></div>
+        </div>
+
         <div class="prefs-section">
           <h3 class="prefs-title">Reading Goals</h3>
           <div class="prefs-grid">
@@ -1167,6 +1173,38 @@ function loadGoalsUI(){
   document.getElementById('goal-catholic').value = (goals.byTag && goals.byTag.catholic) || 0;
   document.getElementById('goal-fiction').value = (goals.byTag && goals.byTag.fiction) || 0;
   document.getElementById('goal-nonfiction').value = (goals.byTag && goals.byTag.nonfiction) || 0;
+  
+  // Update watched series display
+  updateWatchedSeriesList();
+}
+
+function updateWatchedSeriesList(){
+  const container = document.getElementById('watched-series-list');
+  const watchedSeries = sitePrefs.watchSeries || {};
+  const seriesNames = Object.keys(watchedSeries);
+  
+  if(seriesNames.length === 0){
+    container.innerHTML = '<div class="chip">No series being watched</div>';
+    return;
+  }
+  
+  container.innerHTML = seriesNames.map(name => {
+    const author = watchedSeries[name] || '';
+    return `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px;background:var(--paper-2);border-radius:8px;border:1px solid var(--line);">
+        <strong style="flex:1;">${escapeHtml(name)}</strong>
+        ${author ? `<span style="color:var(--muted);font-size:13px;">by ${escapeHtml(author)}</span>` : ''}
+        <button class="action-btn" onclick="removeWatchedSeries('${escapeAttr(name)}')" style="padding:4px 8px;font-size:12px;">Remove</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function removeWatchedSeries(seriesName){
+  delete sitePrefs.watchSeries[seriesName];
+  saveAll();
+  updateWatchedSeriesList();
+  showToast(`Stopped watching "${seriesName}"`);
 }
 
 function saveGoals(){
@@ -1318,18 +1356,26 @@ function toggleDropdownMenu(bookId){
   
   // Toggle the clicked menu
   const menu = document.querySelector(`.dropdown[data-book-id="${bookId}"]`);
-  if(menu){
-    menu.classList.toggle('show');
+  if(!menu) return;
+  
+  const isShowing = menu.classList.contains('show');
+  
+  if(isShowing) {
+    menu.classList.remove('show', 'left');
+  } else {
+    // Show the menu first to measure it
+    menu.classList.add('show');
     
-    // Check if menu would go off-screen and adjust position
-    const rect = menu.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    
-    if(rect.right > viewportWidth - 20) {
-      menu.classList.add('left');
-    } else {
-      menu.classList.remove('left');
-    }
+    // Check positioning after a brief delay to ensure rendering
+    setTimeout(() => {
+      const rect = menu.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      
+      // If menu goes off right edge, position it to the left
+      if(rect.right > viewportWidth - 10) {
+        menu.classList.add('left');
+      }
+    }, 10);
   }
 }
 
@@ -1540,6 +1586,7 @@ function openSection(sectionId){
 // Global functions for inline event handlers
 window.toggleResult = toggleResult;
 window.addSingleResult = addSingleResult;
+window.removeWatchedSeries = removeWatchedSeries;
 
 // Initialize when DOM is loaded
 if(document.readyState === 'loading'){
