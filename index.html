@@ -723,127 +723,15 @@ function renderBooks(){
 const GBOOKS_API = 'https://www.googleapis.com/books/v1/volumes';
 let gbResults = [], gbSelected = null, gbTags = [], recoTags = [];
 
-  <script>
-// --- replace TAG_SUGGESTIONS, cleanTags, recommendTagsFrom, and helpers with this ---
-
-/* Base suggestions for tag input (kept + expanded) */
+/* Base suggestions for tag input */
 const TAG_SUGGESTIONS = [
-  'dark-academia','academy-intrigue','elite-academy','political-fantasy','espionage',
-  'roman-inspired','social-hierarchy','corruption','conspiracy','morally-gray-hero','twisty-plot',
-  'sci-fi','fantasy','romance','mystery','thriller','horror','historical-fiction','young-adult',
-  'classic','literary-fiction','dystopian','memoir','biography','business','leadership','productivity',
-  'marketing','psychology','philosophy','history','science','technology','health','fitness','cooking',
-  'travel','true-crime','faith','neuroscience','time-travel','space','post-apocalyptic',
+  'sci-fi','fantasy','romance','mystery','thriller','horror','historical-fiction',
+  'young-adult','classic','literary-fiction','dystopian','memoir','biography',
+  'business','leadership','productivity','marketing','psychology','philosophy',
+  'history','science','technology','health','fitness','cooking','travel',
+  'true-crime','faith','neuroscience','time-travel','space','post-apocalyptic',
   'page-turner','thought-provoking','emotional','inspiring','practical','short-stories','essays'
 ];
-
-/* Normalizes a tag into our hyphenated style */
-function normalizeTag(s){
-  return String(s||'')
-    .toLowerCase()
-    .replace(/[^a-z0-9 +]/g,' ')
-    .replace(/\s+/g,' ')
-    .trim()
-    .replace(/\s/g,'-');
-}
-function uniquePush(arr, t){
-  t = normalizeTag(t);
-  if(!t) return;
-  if(!arr.includes(t)) arr.push(t);
-}
-
-/* Make some tags from Google Books categories (lightweight) */
-function cleanTags(categories){
-  if(!categories || !categories.length) return [];
-  const stop = new Set(['fiction','nonfiction','non-fiction','books','literature','general','juvenile','adult','ages','grade','book','novel','story','tales','the','and','or','of','in','at','by','for','with','to','from']);
-  const out = [];
-  (categories||[]).forEach(cat=>{
-    cat.split(/[\/\-|&,>()]+/).forEach(w=>{
-      w = normalizeTag(w);
-      if(w.length>3 && w.length<24 && !stop.has(w) && !/^\d+$/.test(w)) uniquePush(out, w);
-    });
-  });
-  // map a few common category phrases
-  const str = (categories||[]).join(' | ').toLowerCase();
-  if(/science fiction/.test(str)) uniquePush(out, 'sci-fi');
-  if(/young adult|ya\b/i.test(str)) uniquePush(out, 'young-adult');
-  if(/historical/.test(str)) uniquePush(out, 'historical-fiction');
-  return out.slice(0,8);
-}
-
-/* Heuristic extractor from free text (title + synopsis) */
-function extractTagsFromText(text){
-  const s = String(text||'').toLowerCase();
-  const tags = [];
-
-  // direct keyword→tag
-  const KEY = [
-    [/academy|academia|boarding school|campus/, 'elite-academy'],
-    [/dark\s*(?:tone|vibe)|gothic|grim/, 'dark-academia'],        // only promoted to dark-academia when academy present (see combos)
-    [/politic|senator|consul|praetor|minister|court intrigue|statecraft/, 'political-fantasy'],
-    [/spy|spying|espionage|infiltrat|undercover|agent/, 'espionage'],
-    [/roman|legion|imperial|caesar|julii|quintus|senator/, 'roman-inspired'],
-    [/hierarch|caste|noble|rank|class system/, 'social-hierarchy'],
-    [/corrupt|corruption|bribe|cover[- ]?up|rot/, 'corruption'],
-    [/conspiracy|cabal|plotting|hidden agenda|shadowy|scheme/, 'conspiracy'],
-    [/morally\s*gray|anti[- ]?hero/, 'morally-gray-hero'],
-    [/twist|twisty|reveal|double[- ]?cross|secrets|what happened/i, 'twisty-plot'],
-    [/murder|whodunnit|whodunit|investigation|detective/, 'mystery'],
-    [/magic|mage|wizard|sorcer|fae|arcane/, 'fantasy'],
-  ];
-  KEY.forEach(([re, tag]) => { if(re.test(s)) uniquePush(tags, tag); });
-
-  // combos that need co-occurrence
-  const hasAcademy = /academy|academia|boarding school|campus/.test(s);
-  const intrigueish = /(hidden agenda|conspiracy|plot|plotting|scheme|secrets|intrigue)/.test(s);
-  if(hasAcademy && intrigueish) uniquePush(tags, 'academy-intrigue');
-  if(hasAcademy && /(dark|gothic|grim|murder|death|secret)/.test(s)) uniquePush(tags, 'dark-academia');
-
-  // pacing / feel
-  if(/political rival|senate|faction|court/i.test(s)) uniquePush(tags, 'political-fantasy');
-  if(/remote island|isolated|secluded/.test(s) && hasAcademy) uniquePush(tags, 'elite-academy');
-
-  return tags.slice(0, 12);
-}
-
-/* Main recommender: categories + synopsis/title signals (never empty if there’s content) */
-function recommendTagsFrom(title, synopsis, categories){
-  const out = [];
-  const fromCats = cleanTags(categories||[]);
-  fromCats.forEach(t => uniquePush(out, t));
-
-  const fromText = extractTagsFromText(`${title||''} ${synopsis||''}`);
-  fromText.forEach(t => uniquePush(out, t));
-
-  // Ensure we surface meaningful topicals first
-  const priority = new Set([
-    'dark-academia','academy-intrigue','political-fantasy','espionage',
-    'roman-inspired','social-hierarchy','corruption','conspiracy','morally-gray-hero','twisty-plot'
-  ]);
-  out.sort((a,b)=>{
-    const pa = priority.has(a) ? 0 : 1;
-    const pb = priority.has(b) ? 0 : 1;
-    return (pa - pb) || a.localeCompare(b);
-  });
-
-  // If somehow still empty but we have text, give some broad guesses
-  if(!out.length && (String(title||synopsis||'').trim().length>0)){
-    ['mystery','thriller','political-fantasy','conspiracy','twisty-plot'].forEach(t=>uniquePush(out,t));
-  }
-  return out.slice(0,12);
-}
-
-/* — hook into the existing editor — */
-function recomputeRecommended(){
-  const title = document.getElementById('edit-title')?.value || (gbSelected && gbSelected.title) || '';
-  const synopsis = document.getElementById('edit-synopsis')?.value || (gbSelected && gbSelected.description) || '';
-  const cats = (gbSelected && gbSelected.categories) || [];
-  recoTags = recommendTagsFrom(title, synopsis, cats);
-  renderRecommendedTags();
-}
-</script>
-
-
 
 /* Parse series from titles like "Title (Series, #2)" etc. */
 function parseSeriesFromTitle(title){
