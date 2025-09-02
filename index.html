@@ -124,6 +124,7 @@
   .more-btn:hover{background:var(--line);border-color:var(--accent)}
   .dropdown{position:absolute;top:100%;right:0;background:#fff;border:2px solid var(--line);border-radius:12px;box-shadow:var(--shadow-hover);padding:8px 0;min-width:150px;z-index:1000;opacity:0;visibility:hidden;transform:translateY(-10px);transition:all 0.2s ease}
   .dropdown.show{opacity:1;visibility:visible;transform:translateY(0)}
+  .dropdown.left{right:auto;left:0}
   .dropdown-item{display:block;padding:10px 16px;color:var(--ink);text-decoration:none;font-size:14px;font-weight:500;border:none;background:none;width:100%;text-align:left;cursor:pointer;transition:background 0.2s ease}
   .dropdown-item:hover{background:var(--paper-2)}
 
@@ -825,7 +826,8 @@ function parseSeriesFromTitle(title){
 }
 
 function mapGenre(categories){
-  const cats = (categories || []).join(' ').toLowerCase();
+  if(!categories || !categories.length) return 'other';
+  const cats = categories.join(' ').toLowerCase();
   const mappings = [
     ['mystery', 'mystery'], ['thriller', 'thriller'], ['horror', 'horror'],
     ['romance', 'romance'], ['science fiction', 'sci-fi'], ['fantasy', 'fantasy'],
@@ -838,6 +840,21 @@ function mapGenre(categories){
     if(cats.includes(needle)) return genre;
   }
   return cats.includes('fiction') ? 'fiction' : 'other';
+}
+
+function cleanTags(categories) {
+  if(!categories || !categories.length) return [];
+  
+  // Clean and normalize tags
+  const cleaned = categories
+    .flatMap(cat => cat.split(/[\/\-|&,]/)) // Split on common delimiters
+    .map(tag => tag.trim().toLowerCase())
+    .filter(tag => tag.length > 2 && tag.length < 20) // Reasonable length
+    .filter(tag => !tag.includes('fiction') && !tag.includes('non-fiction')) // Remove generic terms
+    .filter(tag => !/^\d+$/.test(tag)) // Remove pure numbers
+    .slice(0, 6); // Limit to 6 tags max
+  
+  return [...new Set(cleaned)]; // Remove duplicates
 }
 
 async function searchGoogleBooks(query, maxResults = 20){
@@ -976,7 +993,7 @@ function addSelectedBooks(){
       image: result.image,
       synopsis: result.description,
       genre: mapGenre(result.categories),
-      tags: result.categories.slice(0, 8).map(c => c.toLowerCase()),
+      tags: cleanTags(result.categories),
       status: isUpcoming ? 'upcoming' : 'wish',
       releaseDate: isUpcoming ? releaseDate.toISOString().slice(0, 10) : '',
       series: result.series,
@@ -1303,6 +1320,16 @@ function toggleDropdownMenu(bookId){
   const menu = document.querySelector(`.dropdown[data-book-id="${bookId}"]`);
   if(menu){
     menu.classList.toggle('show');
+    
+    // Check if menu would go off-screen and adjust position
+    const rect = menu.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    
+    if(rect.right > viewportWidth - 20) {
+      menu.classList.add('left');
+    } else {
+      menu.classList.remove('left');
+    }
   }
 }
 
@@ -1410,7 +1437,13 @@ function initializeApp(){
   // Search modal
   document.getElementById('ext-search-btn').addEventListener('click', performSearch);
   document.getElementById('ext-select-all').addEventListener('click', () => {
-    selectedResults = new Set(searchResults.map((_, i) => i));
+    if(selectedResults.size === searchResults.length) {
+      // If all are selected, deselect all
+      selectedResults = new Set();
+    } else {
+      // Select all
+      selectedResults = new Set(searchResults.map((_, i) => i));
+    }
     renderSearchResults();
   });
   document.getElementById('ext-add-selected').addEventListener('click', addSelectedBooks);
