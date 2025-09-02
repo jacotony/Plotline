@@ -573,10 +573,11 @@ function formatStatus(book){
 function renderBookCard(book){
   const starWidth = starWidthFromRating(book.rating || 0);
   const collapsed = document.getElementById('collapse-synopsis')?.checked;
+  const goodreadsUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(book.title + ' ' + book.author)}`;
   
   const coverHtml = book.image 
-    ? `<img class="book-cover" src="${escapeAttr(book.image)}" alt="Cover of ${escapeAttr(book.title)}" loading="lazy">`
-    : `<div class="cover-placeholder">No Cover</div>`;
+    ? `<a href="${goodreadsUrl}" target="_blank" rel="noopener noreferrer"><img class="book-cover" src="${escapeAttr(book.image)}" alt="Cover of ${escapeAttr(book.title)}" loading="lazy"></a>`
+    : `<a href="${goodreadsUrl}" target="_blank" rel="noopener noreferrer"><div class="cover-placeholder">No Cover</div></a>`;
 
   const seriesHtml = book.series?.name 
     ? `<span class="series-chip">${escapeHtml(book.series.name)}${book.series.number ? ` #${book.series.number}` : ''}</span>`
@@ -755,10 +756,7 @@ function applyFilters(shouldAutoSearch = false){
   currentBooks = filtered;
   renderBooks();
 
-  // Auto-open search modal if typing and no results
-  if(shouldAutoSearch && query.length >= 3 && filtered.length === 0){
-    openSearchModal(query);
-  }
+  // Don't auto-open search modal anymore - user will click "Add Book" button
 }
 
 function renderBooks(){
@@ -1203,7 +1201,171 @@ function addSingleResult(index){
   addSelectedBooks();
 }
 
-/* ===== Modals ===== */
+/* ===== Add Book Modal Functions ===== */
+function openAddBookModal(){
+  document.getElementById('add-book-modal').classList.add('show');
+  document.getElementById('add-search-input').value = '';
+  document.getElementById('add-search-results').style.display = 'none';
+  clearManualForm();
+}
+
+function closeAddBookModal(){
+  document.getElementById('add-book-modal').classList.remove('show');
+}
+
+function clearManualForm(){
+  document.getElementById('manual-title').value = '';
+  document.getElementById('manual-author').value = '';
+  document.getElementById('manual-genre').value = 'fiction';
+  document.getElementById('manual-status').value = 'wish';
+  document.getElementById('manual-tags').value = '';
+  document.getElementById('manual-series').value = '';
+  document.getElementById('manual-series-number').value = '';
+  document.getElementById('manual-synopsis').value = '';
+}
+
+async function performAddSearch(){
+  const query = document.getElementById('add-search-input').value.trim();
+  const searchType = document.getElementById('add-search-type').value;
+  
+  if(!query) return;
+  
+  let searchQuery = '';
+  switch(searchType) {
+    case 'title':
+      searchQuery = `intitle:"${query}"`;
+      break;
+    case 'author':
+      searchQuery = `inauthor:"${query}"`;
+      break;
+    case 'isbn':
+      searchQuery = `isbn:${query}`;
+      break;
+    default:
+      searchQuery = query;
+  }
+  
+  try {
+    const resultsDiv = document.getElementById('add-search-results');
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = '<div class="loading"></div>';
+    
+    const data = await searchGoogleBooks(searchQuery, 15);
+    const results = (data.items || []).slice(0, 10).map(item => {
+      const info = item.volumeInfo || {};
+      return {
+        id: item.id,
+        title: info.title || 'Unknown Title',
+        authors: Array.isArray(info.authors) ? info.authors.join(', ') : (info.authors || ''),
+        description: info.description || '',
+        image: info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || '',
+        categories: [...(info.categories || []), ...(info.subjects || [])],
+        publishedDate: info.publishedDate || '',
+        series: parseSeriesFromTitle(info.title)
+      };
+    });
+    
+    renderAddSearchResults(results);
+  } catch(error) {
+    document.getElementById('add-search-results').innerHTML = 
+      '<div style="color:var(--muted);padding:20px;text-align:center;">Search failed. Please try again.</div>';
+  }
+}
+
+function renderAddSearchResults(results){
+  const container = document.getElementById('add-search-results');
+  
+  if(results.length === 0){
+    container.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center;">No books found. Try the manual form below.</div>';
+    return;
+  }
+  
+  container.innerHTML = results.map((result, index) => {
+    const tags = cleanTags(result.categories).slice(0, 4);
+    const tagsDisplay = tags.length ? tags.join(', ') : 'No tags detected';
+    
+    return `
+      <div class="result-item">
+        ${result.image ? `<img src="${result.image}" class="result-cover">` : '<div class="result-cover" style="background:var(--line);"></div>'}
+        <div class="result-info">
+          <div class="result-title">${escapeHtml(result.title)}</div>
+          <div class="result-meta">by ${escapeHtml(result.authors)}</div>
+          <div class="result-meta">
+            ${result.series ? `Series: ${escapeHtml(result.series.name)} #${result.series.number}` : 'Standalone'}
+            ${result.publishedDate ? ` • ${result.publishedDate}` : ''}
+          </div>
+          <div class="result-meta" style="font-size:11px;color:var(--muted);">
+            Tags: ${tagsDisplay}
+          </div>
+        </div>
+        <button class="action-btn primary" onclick="fillFromSearchResult(${index})" type="button">Use This</button>
+      </div>
+    `;
+  }).join('');
+  
+  // Store results for fillFromSearchResult function
+  window.addSearchResults = results;
+}
+
+function fillFromSearchResult(index){
+  const result = window.addSearchResults[index];
+  if(!result) return;
+  
+  document.getElementById('manual-title').value = result.title;
+  document.getElementById('manual-author').value = result.authors;
+  document.getElementById('manual-genre').value = mapGenre(result.categories);
+  document.getElementById('manual-tags').value = cleanTags(result.categories).join(', ');
+  document.getElementById('manual-synopsis').value = result.description;
+  
+  if(result.series) {
+    document.getElementById('manual-series').value = result.series.name;
+    document.getElementById('manual-series-number').value = result.series.number || '';
+  }
+  
+  showToast('Book details filled in - review and add!');
+}
+
+function addManualBook(){
+  const title = document.getElementById('manual-title').value.trim();
+  const author = document.getElementById('manual-author').value.trim();
+  
+  if(!title || !author) {
+    showToast('Title and author are required', true);
+    return;
+  }
+  
+  const genre = document.getElementById('manual-genre').value;
+  const status = document.getElementById('manual-status').value;
+  const tagsText = document.getElementById('manual-tags').value.trim();
+  const tags = tagsText ? tagsText.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : [];
+  const seriesName = document.getElementById('manual-series').value.trim();
+  const seriesNumber = document.getElementById('manual-series-number').value.trim();
+  const synopsis = document.getElementById('manual-synopsis').value.trim();
+  
+  const series = seriesName ? {
+    name: seriesName,
+    number: seriesNumber
+  } : null;
+  
+  const book = newBook({
+    title,
+    author,
+    genre,
+    status,
+    tags,
+    series,
+    synopsis,
+    rating: 0
+  });
+  
+  books.unshift(book);
+  saveAll();
+  populateFilters();
+  applyFilters();
+  updateStats();
+  closeAddBookModal();
+  showToast(`Added "${title}" to your library!`);
+}
 let currentRatingBook = null;
 let currentRating = 0;
 
@@ -1476,17 +1638,33 @@ function editBook(book){
 }
 
 function shareBook(book){
-  const text = `${book.title} by ${book.author}${book.rating ? ` • ${book.rating}★` : ''}`;
+  const goodreadsUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(book.title + ' ' + book.author)}`;
+  const rating = book.rating > 0 ? ` • ${book.rating}★` : '';
+  const text = `"${book.title}" by ${book.author}${rating} - Check it out: ${goodreadsUrl}`;
   
   if(navigator.share){
     navigator.share({
       title: 'Book Recommendation',
       text: text
     }).catch(() => {
-      copyToClipboard(text);
+      // Fallback to SMS on mobile
+      if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        const smsUrl = isiOS() ? `sms:&body=${encodeURIComponent(text)}` : `sms:?body=${encodeURIComponent(text)}`;
+        window.open(smsUrl);
+      } else {
+        copyToClipboard(text);
+        showToast('Book link copied to clipboard!');
+      }
     });
   } else {
-    copyToClipboard(text);
+    // Direct SMS link for mobile, clipboard for desktop
+    if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      const smsUrl = isiOS() ? `sms:&body=${encodeURIComponent(text)}` : `sms:?body=${encodeURIComponent(text)}`;
+      window.open(smsUrl);
+    } else {
+      copyToClipboard(text);
+      showToast('Book recommendation copied to clipboard!');
+    }
   }
 }
 
@@ -1573,7 +1751,7 @@ function toggleDropdownMenu(bookId){
   // Close all other menus
   document.querySelectorAll('.dropdown').forEach(menu => {
     if(menu.dataset.bookId !== bookId){
-      menu.classList.remove('show');
+      menu.classList.remove('show', 'left');
     }
   });
   
@@ -1586,19 +1764,24 @@ function toggleDropdownMenu(bookId){
   if(isShowing) {
     menu.classList.remove('show', 'left');
   } else {
-    // Show the menu first to measure it
+    // Reset positioning classes
+    menu.classList.remove('left');
     menu.classList.add('show');
     
-    // Check positioning after a brief delay to ensure rendering
-    setTimeout(() => {
+    // Force a reflow to ensure the menu is rendered
+    menu.offsetWidth;
+    
+    // Check positioning with a small delay to ensure proper measurement
+    requestAnimationFrame(() => {
       const rect = menu.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       
-      // If menu goes off right edge, position it to the left
-      if(rect.right > viewportWidth - 10) {
+      // If menu goes beyond viewport (accounting for scrollbar), position it to the left
+      if(rect.right > viewportWidth - scrollbarWidth - 20) {
         menu.classList.add('left');
       }
-    }, 10);
+    });
   }
 }
 
@@ -1700,23 +1883,13 @@ function initializeApp(){
   document.getElementById('collapse-synopsis').addEventListener('change', renderBooks);
 
   // Action buttons
-  document.getElementById('add-book-btn').addEventListener('click', () => openSearchModal());
+  document.getElementById('add-book-btn').addEventListener('click', () => openAddBookModal());
   document.getElementById('check-releases-btn').addEventListener('click', checkReleases);
 
-  // Search modal
-  document.getElementById('ext-search-btn').addEventListener('click', performSearch);
-  document.getElementById('ext-select-all').addEventListener('click', () => {
-    if(selectedResults.size === searchResults.length) {
-      // If all are selected, deselect all
-      selectedResults = new Set();
-    } else {
-      // Select all
-      selectedResults = new Set(searchResults.map((_, i) => i));
-    }
-    renderSearchResults();
-  });
-  document.getElementById('ext-add-selected').addEventListener('click', addSelectedBooks);
-  document.getElementById('ext-close').addEventListener('click', closeSearchModal);
+  // Add book modal
+  document.getElementById('add-search-btn').addEventListener('click', performAddSearch);
+  document.getElementById('manual-add-btn').addEventListener('click', addManualBook);
+  document.getElementById('add-book-close').addEventListener('click', closeAddBookModal);
 
   // Rating modal
   document.getElementById('finish-save').addEventListener('click', saveRating);
@@ -1770,7 +1943,7 @@ function initializeApp(){
     // Close modals when clicking outside
     if(e.target.classList.contains('modal')){
       if(e.target.id === 'finish-modal') closeRatingModal();
-      if(e.target.id === 'search-modal') closeSearchModal();
+      if(e.target.id === 'add-book-modal') closeAddBookModal();
     }
   });
 
@@ -1779,7 +1952,7 @@ function initializeApp(){
     if(e.key === 'Escape'){
       document.querySelectorAll('.modal.show').forEach(modal => {
         if(modal.id === 'finish-modal') closeRatingModal();
-        if(modal.id === 'search-modal') closeSearchModal();
+        if(modal.id === 'add-book-modal') closeAddBookModal();
       });
       document.querySelectorAll('.dropdown.show').forEach(menu => {
         menu.classList.remove('show');
@@ -1810,6 +1983,7 @@ function openSection(sectionId){
 window.toggleResult = toggleResult;
 window.addSingleResult = addSingleResult;
 window.removeWatchedSeries = removeWatchedSeries;
+window.fillFromSearchResult = fillFromSearchResult;
 
 // Initialize when DOM is loaded
 if(document.readyState === 'loading'){
