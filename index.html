@@ -164,6 +164,14 @@
   .tag-sug{padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer}
   .tag-sug:last-child{border-bottom:none}
 
+  /* NEW: series companions list in editor */
+  .series-list{max-height:220px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px}
+  .series-item{display:flex;gap:8px;align-items:center;padding:8px;border-bottom:1px solid var(--paper-2)}
+  .series-item:last-child{border-bottom:none}
+  .series-title{font-weight:700}
+  .series-meta{font-size:12px;color:var(--muted)}
+  .series-cover{width:28px;height:42px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+
   .star-rating{display:flex;gap:4px;margin:8px 0}
   .star-btn{background:none;border:none;font-size:24px;color:#ddd;cursor:pointer}
   .star-btn.active{color:var(--gold)}
@@ -223,7 +231,7 @@
           </div>
           <div class="search-controls">
             <label class="chip" style="cursor:pointer;">
-              <input type="checkbox" id="collapse-synopsis" style="margin-right:8px;"> 
+              <input type="checkbox" id="collapse-synopsis" style="margin-right:8px;">
               Hide Synopses
             </label>
             <button class="action-btn" id="check-releases-btn" type="button">Check New Releases</button>
@@ -310,7 +318,7 @@
     </div>
   </div>
 
-  <!-- Search Modal (LIVE TYPEAHEAD + TAG RECS) -->
+  <!-- Search Modal (LIVE TYPEAHEAD + TAG RECS + SERIES COMPANIONS) -->
   <div id="search-modal" class="modal search-modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -364,7 +372,7 @@
               <textarea id="edit-synopsis" class="textarea" placeholder="Description…"></textarea>
             </div>
 
-            <!-- New: Recommended Tags -->
+            <!-- Recommended Tags -->
             <div style="margin:8px 0;">
               <label class="prefs-label">Recommended Tags</label>
               <div id="edit-tags-reco" class="tags"></div>
@@ -377,6 +385,20 @@
                 <input id="edit-tag-input" class="input" placeholder="Add tags… (Enter/Tab/Comma)" style="border:0;background:transparent;padding:6px 0;"/>
               </div>
               <div id="edit-tag-sugs" class="tag-sugs"></div>
+            </div>
+
+            <!-- NEW: Series companions (auto-filled after Pick) -->
+            <div id="series-block" style="display:none;margin-top:8px;">
+              <label class="prefs-label">Other books in this series</label>
+              <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+                <button id="series-refresh" class="action-btn" type="button">Refresh</button>
+                <button id="series-select-all" class="action-btn" type="button">Select All</button>
+                <button id="series-clear" class="action-btn" type="button">Clear</button>
+              </div>
+              <div id="series-list" class="series-list"></div>
+              <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+                <button id="series-add-selected" class="action-btn primary" type="button">Add Selected</button>
+              </div>
             </div>
 
             <div class="grid-2" style="align-items:center;margin-top:6px;">
@@ -405,7 +427,7 @@ function escapeHtml(s){ s=String(s==null?'':s); s=rAll(s,'&','&amp;'); s=rAll(s,
 function escapeAttr(s){ return rAll(escapeHtml(s),'"','&quot;'); }
 function nowISO(){ return new Date().toISOString(); }
 function formatDate(v){ var n=Number(v); var d=new Date(isFinite(n)?n:v); try{ return d.toLocaleDateString(); }catch(_e){ return d.toISOString().slice(0,10);} }
-function showToast(msg,isError){ 
+function showToast(msg,isError){
   var t=document.getElementById('toast'); 
   t.textContent=msg; 
   t.classList.remove('error','success');
@@ -427,8 +449,8 @@ function debounce(fn, delay){ let t; return (...args)=>{ clearTimeout(t); t=setT
 
 /* ===== Storage / Cloud (JSONBin v3) ===== */
 const DEFAULT_JSONBIN_API = 'https://api.jsonbin.io/v3';
-const DEFAULT_BIN_ID = '68b3cb8dd0ea881f406ca19e'; 
-const DEFAULT_API_KEY = '$2a$10$1k.Aw1WU5YTjSlKmSLGQ3eK6gaEhRB/j.FzTEtMp7Ardqd7vI4i4C'; 
+const DEFAULT_BIN_ID = '68b3cb8dd0ea881f406ca19e';
+const DEFAULT_API_KEY = '$2a$10$1k.Aw1WU5YTjSlKmSLGQ3eK6gaEhRB/j.FzTEtMp7Ardqd7vI4i4C';
 
 function getApiKey(){ return (localStorage.getItem('plotline_api_key') || DEFAULT_API_KEY).trim(); }
 function getBinId(){ return (localStorage.getItem('plotline_bin_id') || DEFAULT_BIN_ID).trim(); }
@@ -527,9 +549,15 @@ function formatStatus(book){
   };
   const status = statusMap[book.status] || statusMap.wish;
   let extra = '';
-  if(book.status === 'read' && book.finishAt) extra = ` • ${formatDate(book.finishAt)}`;
-  if(book.status === 'reading' && book.startAt) extra = ` • Started ${formatDate(book.startAt)}`;
-  if(book.status === 'upcoming' && book.releaseDate) extra = ` • ${formatDate(book.releaseDate)}`;
+  // Always show release date if we have one
+  if(book.releaseDate){
+    const dt = new Date(book.releaseDate);
+    const future = dt > new Date();
+    extra = ` • ${future ? 'Releases' : 'Released'} ${formatDate(dt)}`;
+  } else {
+    if(book.status === 'read' && book.finishAt) extra = ` • ${formatDate(book.finishAt)}`;
+    if(book.status === 'reading' && book.startAt) extra = ` • Started ${formatDate(book.startAt)}`;
+  }
   return `<div class="book-status ${status.class}">${status.text}${extra}</div>`;
 }
 function renderBookCard(book){
@@ -695,6 +723,7 @@ function renderBooks(){
 const GBOOKS_API = 'https://www.googleapis.com/books/v1/volumes';
 let gbResults = [], gbSelected = null, gbTags = [], recoTags = [];
 
+/* Base suggestions for tag input */
 const TAG_SUGGESTIONS = [
   'sci-fi','fantasy','romance','mystery','thriller','horror','historical-fiction',
   'young-adult','classic','literary-fiction','dystopian','memoir','biography',
@@ -704,6 +733,7 @@ const TAG_SUGGESTIONS = [
   'page-turner','thought-provoking','emotional','inspiring','practical','short-stories','essays'
 ];
 
+/* Parse series from titles like "Title (Series, #2)" etc. */
 function parseSeriesFromTitle(title){
   if(!title) return null;
   const patterns = [
@@ -773,9 +803,19 @@ function recommendTagsFrom(title, synopsis, categories){
   return Array.from(rec).slice(0,12);
 }
 
-async function searchGoogleBooksEnglish(query, author, maxResults=15){
-  const q = query.trim() + (author.trim()? (' inauthor:' + author.trim()) : '');
-  const url = `${GBOOKS_API}?q=${encodeURIComponent(q)}&maxResults=${maxResults}&printType=books&orderBy=relevance&langRestrict=en`;
+/* --- EN-only search with advanced query support --- */
+async function searchGoogleBooksEnglish(query, author, maxResults=15, opts={}){
+  let qParts=[];
+  if(opts.customQ){
+    qParts.push(opts.customQ);
+  } else {
+    let q = query.trim();
+    if(author && author.trim()) q += ` inauthor:"${author.trim()}"`;
+    qParts.push(q);
+  }
+  if(opts.excludeTitle){ qParts.push(`-intitle:"${opts.excludeTitle}"`); }
+  if(Array.isArray(opts.subjects)){ opts.subjects.forEach(s => { if(s) qParts.push(`subject:"${s}"`); }); }
+  const url = `${GBOOKS_API}?q=${encodeURIComponent(qParts.join(' ').trim())}&maxResults=${maxResults}&printType=${opts.printType||'books'}&orderBy=relevance&langRestrict=en`;
   const resp = await fetch(url);
   if(!resp.ok) throw new Error('Search failed');
   const data = await resp.json();
@@ -800,6 +840,8 @@ async function searchGoogleBooksEnglish(query, author, maxResults=15){
     };
   });
 }
+
+/* Results rendering */
 function renderSearchResults(){
   const container = document.getElementById('search-results');
   const counter = document.getElementById('ext-result-count');
@@ -820,6 +862,8 @@ function renderSearchResults(){
     </div>`).join('');
   counter.textContent = `${gbResults.length} result${gbResults.length===1?'':'s'}`;
 }
+
+/* Modal open/close */
 function openSearchModal(prefill=''){
   document.getElementById('ext-search-input').value = prefill || '';
   document.getElementById('ext-search-author').value = '';
@@ -827,11 +871,14 @@ function openSearchModal(prefill=''){
   document.getElementById('ext-result-count').textContent = '0 results';
   gbResults = []; gbSelected = null; gbTags = []; recoTags = [];
   renderEditTags(); renderRecommendedTags();
+  resetSeriesBlock();
   document.getElementById('edit-panel').style.display = 'none';
   document.getElementById('edit-empty').style.display = 'block';
   document.getElementById('search-modal').classList.add('show');
 }
 function closeSearchModal(){ document.getElementById('search-modal').classList.remove('show'); }
+
+/* Basic search (typed/author) */
 async function performSearch(){
   const title = document.getElementById('ext-search-input').value.trim();
   const author = document.getElementById('ext-search-author').value.trim();
@@ -864,6 +911,60 @@ function recomputeRecommended(){
   recoTags = recommendTagsFrom(title, synopsis, cats);
   renderRecommendedTags();
 }
+
+/* ===== Series companions (auto after Pick) ===== */
+let seriesCache = []; // store last companions
+
+function resetSeriesBlock(){
+  seriesCache = [];
+  document.getElementById('series-list').innerHTML = '';
+  document.getElementById('series-block').style.display = 'none';
+}
+function seriesRowHtml(item, idx){
+  const img = item.image ? `<img src="${escapeAttr(item.image)}" class="series-cover" alt="">` : '<div class="series-cover" style="background:var(--line)"></div>';
+  const rel = item.publishedDate ? ` • ${escapeHtml(item.publishedDate)}` : '';
+  const upcoming = item.isUpcoming ? ' — Upcoming' : '';
+  return `<div class="series-item">
+    <input type="checkbox" data-series-index="${idx}"/>
+    ${img}
+    <div style="flex:1;">
+      <div class="series-title">${escapeHtml(item.title)}</div>
+      <div class="series-meta">${escapeHtml(item.authors || '')}${rel}${upcoming}</div>
+    </div>
+    <button class="action-btn" data-add-one="${idx}" type="button">Add</button>
+  </div>`;
+}
+function renderSeriesList(){
+  const list = document.getElementById('series-list');
+  if(!seriesCache.length){ list.innerHTML = '<div class="series-item"><div class="series-meta">No other books found in this series.</div></div>'; return; }
+  list.innerHTML = seriesCache.map((it, i) => seriesRowHtml(it, i)).join('');
+  document.getElementById('series-block').style.display = 'block';
+}
+async function fetchSeriesCompanions(seriesName, author){
+  if(!seriesName) { resetSeriesBlock(); return; }
+  try{
+    const built = `intitle:"${seriesName}"${author?` inauthor:"${author}"`:''}`;
+    const raw = await searchGoogleBooksEnglish('', '', 30, { customQ: built });
+    // Keep only same-series matches by parsed series name, and exclude exact same title as current selection
+    const nameLC = seriesName.toLowerCase();
+    const filtered = raw.filter(x => {
+      const sn = (x.series && x.series.name || '').toLowerCase();
+      const titleLC = (x.title||'').toLowerCase();
+      return (sn && (sn.includes(nameLC) || nameLC.includes(sn)));
+    });
+    seriesCache = filtered.map(it => {
+      const dt = toDateObj(it.publishedDate);
+      const future = dt && dt > new Date();
+      return Object.assign({}, it, { isUpcoming: !!future });
+    });
+    renderSeriesList();
+  }catch(e){
+    resetSeriesBlock();
+    showToast('Series search failed', true);
+  }
+}
+
+/* ===== Pick result into editor (triggers series search) ===== */
 function loadResultIntoEdit(idx){
   const r = gbResults[idx]; if(!r) return;
   gbSelected = r;
@@ -876,47 +977,45 @@ function loadResultIntoEdit(idx){
   recomputeRecommended();
   document.getElementById('edit-empty').style.display = 'none';
   document.getElementById('edit-panel').style.display = 'block';
+
+  // Auto series fetch right after Pick
+  const primaryAuthor = (r.authors || '').split(',')[0] || '';
+  const seriesName = r.series && r.series.name || '';
+  if(seriesName){ fetchSeriesCompanions(seriesName, primaryAuthor); }
+  else { resetSeriesBlock(); }
 }
-function resetEdit(){
-  gbSelected=null; gbTags=[]; recoTags=[];
-  renderEditTags(); renderRecommendedTags();
-  document.getElementById('edit-title').value = '';
-  document.getElementById('edit-author').value = '';
-  document.getElementById('edit-image').value = '';
-  document.getElementById('edit-synopsis').value = '';
-  document.getElementById('edit-genre').value = '';
-  document.getElementById('edit-dest').value = 'wish';
-  document.getElementById('edit-empty').style.display = 'block';
-  document.getElementById('edit-panel').style.display = 'none';
-}
+
+/* ===== Confirm Add (auto-upcoming for future release) ===== */
 function confirmAddFromEdit(){
   const title = document.getElementById('edit-title').value.trim();
   const author = document.getElementById('edit-author').value.trim();
   const image = document.getElementById('edit-image').value.trim();
   const synopsis = document.getElementById('edit-synopsis').value.trim();
   const genre = (document.getElementById('edit-genre').value || 'other').trim().toLowerCase();
-  const dest = document.getElementById('edit-dest').value || 'wish';
+  let dest = document.getElementById('edit-dest').value || 'wish';
   if(!title || !author){ showToast('Title and author are required.', true); return; }
-  // If user provided no tags, fall back to recommended
   const chosenTags = gbTags.length ? gbTags.slice(0,12) : recoTags.slice(0,8);
 
+  // Release-date logic: if picked book is future-dated, force Upcoming & set releaseDate
   let releaseDate = '';
-  let status = dest;
-  if(dest === 'upcoming' && gbSelected && gbSelected.publishedDate){
+  if(gbSelected && gbSelected.publishedDate){
     const dt = toDateObj(gbSelected.publishedDate);
-    if(dt && dt > new Date()){ releaseDate = dt.toISOString().slice(0,10); }
+    if(dt && dt > new Date()){
+      releaseDate = dt.toISOString().slice(0,10);
+      if(dest !== 'read' && dest !== 'reading'){ dest = 'upcoming'; }
+    }
   }
 
   const book = newBook({
     title, author, image, synopsis,
     genre, tags: chosenTags,
-    status, releaseDate,
+    status: dest, releaseDate,
     series: gbSelected && gbSelected.series ? gbSelected.series : null
   });
 
   books.unshift(book);
 
-  // Watch series?
+  // Watch series toggle
   const watch = document.getElementById('ext-watch').checked;
   if(watch && book.series?.name){ sitePrefs.watchSeries[book.series.name] = book.author; }
 
@@ -924,7 +1023,61 @@ function confirmAddFromEdit(){
   resetEdit();
 }
 
-/* ===== Release Checking ===== */
+/* ===== Add Series Selected / Add One ===== */
+function addSeriesItemToLibrary(item){
+  const dt = toDateObj(item.publishedDate);
+  const future = dt && dt > new Date();
+  const status = future ? 'upcoming' : 'wish';
+  const releaseDate = future ? dt.toISOString().slice(0,10) : '';
+  const book = newBook({
+    title: item.title,
+    author: item.authors || '',
+    image: item.image || '',
+    synopsis: item.description || '',
+    genre: mapGenre(item.categories || []),
+    tags: cleanTags(item.categories || []),
+    status,
+    releaseDate,
+    series: item.series || null
+  });
+  books.unshift(book);
+}
+function addSelectedSeries(){
+  const checks = Array.from(document.querySelectorAll('#series-list [data-series-index]')).filter(c => c.checked);
+  if(!checks.length){ showToast('Select series books to add', true); return; }
+  checks.forEach(c => {
+    const idx = parseInt(c.getAttribute('data-series-index'),10);
+    if(seriesCache[idx]) addSeriesItemToLibrary(seriesCache[idx]);
+  });
+  saveAll(); populateFilters(); applyFilters(); updateStats(); showToast('Series books added');
+}
+
+/* ===== Find Similar (smart query: author + strong tags, not "popular") ===== */
+function strongestTagsFor(book){
+  const generic = new Set(['other','fiction','nonfiction','novel','book','general']);
+  const tags = (book.tags || []).filter(t => t && t.length>2 && !generic.has(t));
+  // prefer topical tags first, then genre
+  return tags.slice(0,3);
+}
+async function runSimilarForBook(book){
+  openSearchModal(); // open modal first
+  const author = (book.author||'').split(',')[0];
+  const tags = strongestTagsFor(book);
+  // Build advanced query: author + subjects for tags, exclude current title
+  const customQ = `inauthor:"${author}" ${tags.map(t=>`subject:"${t.replace(/"/g,'')}"`).join(' ')} -intitle:"${book.title.replace(/"/g,'')}"`;
+  try{
+    gbResults = await searchGoogleBooksEnglish('', '', 18, { customQ });
+    renderSearchResults();
+    // Prefill top bar fields for visibility (optional)
+    document.getElementById('ext-search-input').value = tags.join(' ');
+    document.getElementById('ext-search-author').value = author;
+  }catch(e){
+    document.getElementById('search-results').innerHTML = '<div class="result-item"><div class="result-info"><div class="result-title" style="color:#b74a4a">Similar search failed.</div></div></div>';
+    document.getElementById('ext-result-count').textContent = '0 results';
+  }
+}
+
+/* ===== Release Checking (watched series) ===== */
 async function checkReleases(){
   const watchedSeries = Object.keys(sitePrefs.watchSeries || {});
   if(watchedSeries.length === 0){ showToast('No series being watched'); return; }
@@ -932,21 +1085,15 @@ async function checkReleases(){
   for(const seriesName of watchedSeries){
     try{
       const author = sitePrefs.watchSeries[seriesName] || '';
-      const query = `intitle:"${seriesName}"${author ? ` inauthor:"${author}"` : ''}`;
-      const url = `${GBOOKS_API}?q=${encodeURIComponent(query)}&maxResults=20&printType=books&langRestrict=en`;
-      const r = await fetch(url); const data = r.ok ? await r.json() : {items:[]};
+      const built = `intitle:"${seriesName}"${author?` inauthor:"${author}"`:''}`;
+      const data = await searchGoogleBooksEnglish('', '', 20, { customQ: built });
       const now = new Date();
-      const upcoming = (data.items || [])
-        .filter(it => String((it.volumeInfo && it.volumeInfo.language)||'en').toLowerCase().startsWith('en'))
-        .map(item => {
-          const info = item.volumeInfo || {};
-          const releaseDate = toDateObj(info.publishedDate);
-          return { title: info.title, releaseDate, isUpcoming: releaseDate && releaseDate > now };
-        })
-        .filter(x => x.isUpcoming)
+      const upcoming = data
+        .map(it => ({ title: it.title, releaseDate: toDateObj(it.publishedDate) }))
+        .filter(x => x.releaseDate && x.releaseDate > now)
         .sort((a,b) => a.releaseDate - b.releaseDate);
       if(upcoming.length){ const next = upcoming[0]; showToast(`${seriesName}: "${next.title}" releasing ${formatDate(next.releaseDate)}`); found++; }
-    }catch(e){ console.warn('Release check failed', e); }
+    }catch(e){ /* ignore */ }
   }
   if(!found) showToast('No upcoming releases found');
 }
@@ -964,7 +1111,7 @@ function handleBookAction(action, bookId){
     case 'delete':
       if(confirm(`Delete "${book.title}"?`)){ books = books.filter(b => b.id !== book.id); saveAll(); applyFilters(); updateStats(); showToast('Book deleted'); }
       break;
-    case 'find-similar': findSimilarBooks(book); break;
+    case 'find-similar': runSimilarForBook(book); break;
     case 'share': shareBook(book); break;
     case 'toggle-synopsis': toggleSynopsis(bookId); break;
     case 'toggle-menu': toggleDropdownMenu(bookId); break;
@@ -992,20 +1139,6 @@ function shareBook(book){
   }
 }
 function copyToClipboard(text){ navigator.clipboard.writeText(text).then(()=>showToast('Copied to clipboard!')).catch(()=>showToast('Could not copy to clipboard',true)); }
-function findSimilarBooks(book){
-  let terms = [];
-  if(book.tags && book.tags.length){
-    const good = book.tags.filter(t => t.length>3 && !['other','general','book','books','fiction','nonfiction'].includes(t));
-    terms.push(...good.slice(0,2));
-  }
-  if(book.genre && book.genre!=='other' && book.genre!=='fiction'){ terms.push(book.genre.replace(/-/g,' ')); }
-  if(terms.length===0){
-    const broad = { 'mystery':'mystery crime detective','thriller':'thriller suspense','romance':'romance love story','fantasy':'fantasy magic adventure','sci-fi':'science fiction space','horror':'horror supernatural scary','biography':'biography','memoir':'memoir','history':'history','business':'business management','self-help':'self help','philosophy':'philosophy','spirituality/religion':'religion spiritual','health & fitness':'health fitness','cooking':'cooking recipe','travel':'travel' };
-    terms.push(broad[book.genre]||'popular books');
-  }
-  openSearchModal(terms.join(' '));
-  showToast(`Finding ${book.genre||''} picks…`);
-}
 function toggleSynopsis(bookId){
   const synopsis = document.querySelector(`[data-book-id="${bookId}"] .book-synopsis`);
   if(!synopsis) return;
@@ -1061,8 +1194,8 @@ function saveRating(){
 
 /* ===== Export/Import/Goals ===== */
 function exportCSV(){
-  const headers = ['Title','Author','Genre','Rating','Status','Tags','Added Date'];
-  const rows = books.map(book => [book.title, book.author, book.genre, book.rating || 0, book.status, (book.tags || []).join('; '), formatDate(book.addedAt)]);
+  const headers = ['Title','Author','Genre','Rating','Status','Tags','Added Date','Release Date','Series'];
+  const rows = books.map(book => [book.title, book.author, book.genre, book.rating || 0, book.status, (book.tags || []).join('; '), formatDate(book.addedAt), book.releaseDate||'', (book.series && book.series.name) || '']);
   const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
   downloadFile('plotline-books.csv', csv, 'text/csv');
 }
@@ -1163,14 +1296,39 @@ function initializeApp(){
 
   // Pick result (delegate)
   document.getElementById('search-results').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-pick]'); if(!btn) return;
-    const idx = parseInt(btn.getAttribute('data-pick'),10); loadResultIntoEdit(idx);
+    const btn = e.target.closest('[data-pick]'); 
+    if(btn){
+      const idx = parseInt(btn.getAttribute('data-pick'),10); 
+      loadResultIntoEdit(idx);
+      return;
+    }
+  });
+
+  // Series panel UI
+  document.getElementById('series-add-selected').addEventListener('click', addSelectedSeries);
+  document.getElementById('series-select-all').addEventListener('click', () => {
+    document.querySelectorAll('#series-list [data-series-index]').forEach(cb => cb.checked = true);
+  });
+  document.getElementById('series-clear').addEventListener('click', () => {
+    document.querySelectorAll('#series-list [data-series-index]').forEach(cb => cb.checked = false);
+  });
+  document.getElementById('series-list').addEventListener('click', (e)=>{
+    const addOne = e.target.closest('[data-add-one]');
+    if(addOne){
+      const idx = parseInt(addOne.getAttribute('data-add-one'),10);
+      if(seriesCache[idx]){ addSeriesItemToLibrary(seriesCache[idx]); saveAll(); populateFilters(); applyFilters(); updateStats(); showToast('Series book added'); }
+    }
+  });
+  document.getElementById('series-refresh').addEventListener('click', ()=>{
+    if(gbSelected && gbSelected.series){
+      const primaryAuthor = (gbSelected.authors || '').split(',')[0] || '';
+      fetchSeriesCompanions(gbSelected.series.name, primaryAuthor);
+    }
   });
 
   // Edit panel
   document.getElementById('edit-confirm').addEventListener('click', confirmAddFromEdit);
   document.getElementById('edit-reset').addEventListener('click', resetEdit);
-  // Recompute recommended tags as you type
   const recompute = debounce(recomputeRecommended, 250);
   document.getElementById('edit-title').addEventListener('input', recompute);
   document.getElementById('edit-synopsis').addEventListener('input', recompute);
@@ -1193,7 +1351,7 @@ function initializeApp(){
   tagInput.addEventListener('input', (e) => {
     const q=(e.target.value||'').trim().toLowerCase();
     const base = [...new Set([...TAG_SUGGESTIONS, ...recoTags])];
-    if(!q){ // show a few helpful ones when empty
+    if(!q){
       const initial = base.filter(t=>!gbTags.includes(t)).slice(0,8);
       if(initial.length){ sugBox.innerHTML = initial.map(t => `<div class="tag-sug" data-tag="${escapeAttr(t)}">${escapeHtml(t)}</div>`).join(''); sugBox.style.display='block'; } 
       else sugBox.style.display='none';
@@ -1260,6 +1418,17 @@ function openSection(sectionId){
   document.getElementById(`${sectionId}-btn`).classList.add('active');
 }
 window.removeWatchedSeries = removeWatchedSeries;
+
+/* ===== Cloud helpers (optional) ===== */
+async function cloudCreate(){
+  const body = JSON.stringify({ plotline: { books: [], sitePrefs } });
+  const r = await fetch(`${getApiBase()}/b`, { method:'POST', headers: jbHeaders(), body });
+  if(!r.ok){ showToast('Create bin failed', true); return; }
+  const data = await r.json();
+  if(data && data.metadata && data.metadata.id){ localStorage.setItem('plotline_bin_id', data.metadata.id); showToast('New bin created'); }
+}
+async function cloudPull(){ await loadAll(); populateFilters(); applyFilters(); updateStats(); showToast('Pulled from cloud'); }
+async function cloudPush(){ await saveAll(); showToast('Pushed to cloud'); }
 
 /* Boot */
 if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', initializeApp); }
