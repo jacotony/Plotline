@@ -75,10 +75,10 @@
   .group-section{margin-bottom:32px}
   .group-title{font-size:1.4rem;font-weight:800;color:var(--ink);margin-bottom:16px;display:flex;align-items:center;gap:12px}
   .group-count{background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:0.85rem;font-weight:700}
-  .books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px}
+  .books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;overflow:visible}
 
-  .book-card{border:2px solid var(--line);border-radius:16px;padding:20px;background:#fff;box-shadow:var(--shadow);transition:all 0.3s ease;position:relative;overflow:visible}
-  .book-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover);border-color:var(--accent)}
+  .book-card{border:2px solid var(--line);border-radius:16px;padding:20px;background:#fff;box-shadow:var(--shadow);transition:all 0.3s ease;position:relative;overflow:visible;z-index:1}
+  .book-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-hover);border-color:var(--accent);z-index:10}
 
   .book-header{display:flex;gap:16px;margin-bottom:16px}
   .book-cover{width:80px;height:120px;object-fit:cover;border-radius:8px;border:2px solid var(--line);flex-shrink:0;transition:transform 0.2s ease}
@@ -122,11 +122,17 @@
   .more-menu{position:relative}
   .more-btn{width:36px;height:36px;border-radius:50%;background:var(--paper);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s ease}
   .more-btn:hover{background:var(--line);border-color:var(--accent)}
-  .dropdown{position:absolute;top:100%;right:0;background:#fff;border:2px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:8px 0;min-width:160px;z-index:2000;opacity:0;visibility:hidden;transform:translateY(-10px);transition:all 0.2s ease}
+  .dropdown{position:absolute;top:100%;right:0;background:#fff;border:2px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:8px 0;min-width:160px;z-index:9999;opacity:0;visibility:hidden;transform:translateY(-10px);transition:all 0.2s ease;max-height:300px;overflow:visible}
   .dropdown.show{opacity:1;visibility:visible;transform:translateY(0)}
   .dropdown.left{right:auto;left:-120px}
   .dropdown-item{display:block;padding:12px 16px;color:var(--ink);text-decoration:none;font-size:14px;font-weight:500;border:none;background:none;width:100%;text-align:left;cursor:pointer;transition:background 0.2s ease;white-space:nowrap}
   .dropdown-item:hover{background:var(--paper-2)}
+
+  /* Force dropdown above everything on iOS */
+  @supports (-webkit-touch-callout: none) {
+    .dropdown{z-index:99999;position:fixed}
+    .dropdown.show{position:absolute}
+  }
 
   .toast{position:fixed;bottom:24px;right:24px;background:#2a2a2a;color:#fff;padding:16px 20px;border-radius:12px;opacity:0;transform:translateY(20px);transition:all 0.3s ease;pointer-events:none;z-index:9999;max-width:400px;box-shadow:var(--shadow-hover);font-weight:500}
   .toast.show{opacity:1;transform:translateY(0)}
@@ -851,53 +857,143 @@ function mapGenre(categories){
 function cleanTags(categories) {
   if(!categories || !categories.length) return [];
   
-  // Much better tag extraction and cleaning
-  const stopWords = new Set(['fiction', 'nonfiction', 'non-fiction', 'books', 'literature', 'general', 'juvenile', 'adult', 'ages', 'grade', 'book']);
+  // Enhanced extraction with much more detailed analysis
+  const stopWords = new Set([
+    'fiction', 'nonfiction', 'non-fiction', 'books', 'literature', 'general', 
+    'juvenile', 'adult', 'ages', 'grade', 'book', 'novel', 'story', 'tales',
+    'the', 'and', 'or', 'of', 'in', 'at', 'by', 'for', 'with', 'to', 'from'
+  ]);
   
-  const cleaned = categories
-    .flatMap(cat => {
-      // Split on various delimiters and extract meaningful parts
-      return cat.split(/[\/\-|&,>]+/)
-        .map(part => part.trim().toLowerCase())
-        .filter(part => part.length > 2 && part.length < 25)
-        .filter(part => !stopWords.has(part))
-        .filter(part => !/^\d+$/.test(part)) // No pure numbers
-        .filter(part => !/^(the|and|or|of|in|at|by|for|with|to)$/.test(part)) // No articles/prepositions
-    })
-    .filter(Boolean)
-    .slice(0, 8);
+  const allText = categories.join(' | ').toLowerCase();
+  const extractedTags = new Set();
   
-  // Add some intelligent genre-based tags
-  const fullText = categories.join(' ').toLowerCase();
-  const smartTags = [];
+  // Extract detailed themes and subjects
+  const themePatterns = [
+    // Specific subgenres
+    [/cozy.?myster(y|ies)/i, 'cozy-mystery'],
+    [/police.?procedural/i, 'police-procedural'], 
+    [/true.?crime/i, 'true-crime'],
+    [/psychological.?thriller/i, 'psychological-thriller'],
+    [/romantic.?suspense/i, 'romantic-suspense'],
+    [/urban.?fantasy/i, 'urban-fantasy'],
+    [/epic.?fantasy/i, 'epic-fantasy'],
+    [/space.?opera/i, 'space-opera'],
+    [/cyberpunk/i, 'cyberpunk'],
+    [/dystopian/i, 'dystopian'],
+    [/post.?apocalyptic/i, 'post-apocalyptic'],
+    [/historical.?fiction/i, 'historical-fiction'],
+    [/literary.?fiction/i, 'literary-fiction'],
+    [/women.?s.?fiction/i, 'womens-fiction'],
+    [/coming.?of.?age/i, 'coming-of-age'],
+    
+    // Themes and topics
+    [/serial.?killer/i, 'serial-killer'],
+    [/murder/i, 'murder'],
+    [/detective/i, 'detective'],
+    [/investigation/i, 'investigation'],
+    [/conspiracy/i, 'conspiracy'],
+    [/espionage|spy/i, 'espionage'],
+    [/war/i, 'war'],
+    [/military/i, 'military'],
+    [/political/i, 'political'],
+    [/family.?saga/i, 'family-saga'],
+    [/friendship/i, 'friendship'],
+    [/betrayal/i, 'betrayal'],
+    [/revenge/i, 'revenge'],
+    [/redemption/i, 'redemption'],
+    [/survival/i, 'survival'],
+    [/adventure/i, 'adventure'],
+    [/quest/i, 'quest'],
+    [/magic/i, 'magic'],
+    [/wizard|witch/i, 'wizards'],
+    [/vampire/i, 'vampires'],
+    [/werewolf/i, 'werewolves'],
+    [/dragon/i, 'dragons'],
+    [/alien/i, 'aliens'],
+    [/time.?travel/i, 'time-travel'],
+    [/artificial.?intelligence/i, 'ai'],
+    [/robot/i, 'robots'],
+    
+    // Settings and periods
+    [/victorian/i, 'victorian'],
+    [/medieval/i, 'medieval'],
+    [/regency/i, 'regency'],
+    [/world.?war/i, 'world-war'],
+    [/civil.?war/i, 'civil-war'],
+    [/ancient/i, 'ancient'],
+    [/contemporary/i, 'contemporary'],
+    [/small.?town/i, 'small-town'],
+    [/new.?york/i, 'new-york'],
+    [/london/i, 'london'],
+    [/paris/i, 'paris'],
+    [/america/i, 'american'],
+    [/british/i, 'british'],
+    [/irish/i, 'irish'],
+    [/scottish/i, 'scottish'],
+    
+    // Professional/Academic subjects
+    [/psychology/i, 'psychology'],
+    [/philosophy/i, 'philosophy'], 
+    [/sociology/i, 'sociology'],
+    [/anthropology/i, 'anthropology'],
+    [/economics/i, 'economics'],
+    [/business/i, 'business'],
+    [/management/i, 'management'],
+    [/leadership/i, 'leadership'],
+    [/entrepreneur/i, 'entrepreneurship'],
+    [/marketing/i, 'marketing'],
+    [/finance/i, 'finance'],
+    [/investing/i, 'investing'],
+    [/productivity/i, 'productivity'],
+    [/mindfulness/i, 'mindfulness'],
+    [/meditation/i, 'meditation'],
+    [/spirituality/i, 'spiritual'],
+    [/religion/i, 'religious'],
+    [/christianity/i, 'christian'],
+    [/buddhism/i, 'buddhist'],
+    [/science/i, 'science'],
+    [/technology/i, 'technology'],
+    [/medicine/i, 'medical'],
+    [/health/i, 'health'],
+    [/fitness/i, 'fitness'],
+    [/nutrition/i, 'nutrition'],
+    [/cooking/i, 'cooking'],
+    [/recipe/i, 'recipes'],
+    [/travel/i, 'travel'],
+    [/memoir/i, 'memoir'],
+    [/biography/i, 'biography'],
+    [/autobiography/i, 'autobiography']
+  ];
   
-  if(fullText.includes('mystery') || fullText.includes('detective')) smartTags.push('mystery');
-  if(fullText.includes('romance')) smartTags.push('romance');  
-  if(fullText.includes('fantasy')) smartTags.push('fantasy');
-  if(fullText.includes('science fiction') || fullText.includes('sci-fi')) smartTags.push('sci-fi');
-  if(fullText.includes('thriller')) smartTags.push('thriller');
-  if(fullText.includes('horror')) smartTags.push('horror');
-  if(fullText.includes('biography')) smartTags.push('biography');
-  if(fullText.includes('history')) smartTags.push('history');
-  if(fullText.includes('philosophy')) smartTags.push('philosophy');
-  if(fullText.includes('psychology')) smartTags.push('psychology');
-  if(fullText.includes('business')) smartTags.push('business');
-  if(fullText.includes('self-help') || fullText.includes('self help')) smartTags.push('self-help');
-  if(fullText.includes('memoir')) smartTags.push('memoir');
-  if(fullText.includes('true crime')) smartTags.push('true-crime');
-  if(fullText.includes('cookbook') || fullText.includes('cooking')) smartTags.push('cooking');
-  if(fullText.includes('travel')) smartTags.push('travel');
-  if(fullText.includes('religion') || fullText.includes('spiritual')) smartTags.push('spiritual');
-  if(fullText.includes('health') || fullText.includes('fitness')) smartTags.push('health');
-  if(fullText.includes('parenting')) smartTags.push('parenting');
+  // Apply pattern matching
+  for(const [pattern, tag] of themePatterns) {
+    if(pattern.test(allText)) {
+      extractedTags.add(tag);
+    }
+  }
   
-  // Combine and deduplicate
-  const allTags = [...new Set([...cleaned, ...smartTags])];
-  return allTags.slice(0, 6);
+  // Also extract clean individual words from categories
+  const words = categories
+    .flatMap(cat => cat.split(/[\/\-|&,>()]+/))
+    .map(word => word.trim().toLowerCase())
+    .filter(word => 
+      word.length > 3 && 
+      word.length < 20 &&
+      !stopWords.has(word) &&
+      !/^\d+$/.test(word) &&
+      !word.includes('.')
+    );
+  
+  words.forEach(word => extractedTags.add(word));
+  
+  // Convert to array and limit
+  return Array.from(extractedTags).slice(0, 8);
 }
 
 async function searchGoogleBooks(query, maxResults = 20){
-  const url = `${GBOOKS_API}?q=${encodeURIComponent(query)}&maxResults=${maxResults}`;
+  // Focus search on books only, exclude periodicals and articles
+  const bookQuery = `${query} +inpublisher:books OR +subject:fiction OR +subject:literature -inpublisher:newspaper -inpublisher:magazine -inpublisher:journal -inpublisher:periodical`;
+  const url = `${GBOOKS_API}?q=${encodeURIComponent(bookQuery)}&maxResults=${maxResults}&printType=books&fields=items(id,volumeInfo(title,authors,description,categories,subjects,imageLinks,publishedDate,averageRating,ratingsCount,industryIdentifiers,language,publishedDate,pageCount))`;
   const response = await fetch(url);
   if(!response.ok) throw new Error('Search failed');
   return await response.json();
@@ -919,18 +1015,66 @@ async function performSearch(){
       const info = item.volumeInfo || {};
       const series = parseSeriesFromTitle(info.title);
       
+      // Combine categories and subjects for better tag extraction
+      const allCategoryData = [
+        ...(info.categories || []),
+        ...(info.subjects || [])
+      ];
+      
       return {
         id: item.id,
         title: info.title || 'Unknown Title',
         authors: Array.isArray(info.authors) ? info.authors.join(', ') : (info.authors || ''),
         description: info.description || '',
         image: info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || '',
-        categories: info.categories || [],
+        categories: allCategoryData,
         publishedDate: info.publishedDate || '',
         series,
         averageRating: info.averageRating || 0,
-        ratingsCount: info.ratingsCount || 0
+        ratingsCount: info.ratingsCount || 0,
+        language: info.language || 'en',
+        pageCount: info.pageCount || 0
       };
+    })
+    // Filter out old articles, periodicals, and non-books
+    .filter(item => {
+      const publishYear = item.publishedDate ? parseInt(item.publishedDate.split('-')[0]) : 0;
+      const currentYear = new Date().getFullYear();
+      
+      // Skip items older than 1950 unless they're classics
+      if(publishYear > 0 && publishYear < 1950) {
+        const isClassic = item.categories.some(cat => 
+          cat.toLowerCase().includes('classic') || 
+          cat.toLowerCase().includes('literature')
+        );
+        if(!isClassic) return false;
+      }
+      
+      // Filter out obvious non-books
+      const title = item.title.toLowerCase();
+      const categories = item.categories.join(' ').toLowerCase();
+      
+      // Skip articles, journals, newspapers
+      if(title.includes('article') || 
+         title.includes('journal') || 
+         title.includes('newspaper') ||
+         title.includes('magazine') ||
+         categories.includes('periodical') ||
+         categories.includes('newspaper') ||
+         categories.includes('journal')) {
+        return false;
+      }
+      
+      // Skip items without meaningful page counts (likely articles)
+      if(item.pageCount > 0 && item.pageCount < 50 && !item.categories.some(cat => 
+        cat.toLowerCase().includes('children') || 
+        cat.toLowerCase().includes('juvenile') ||
+        cat.toLowerCase().includes('poetry')
+      )) {
+        return false;
+      }
+      
+      return true;
     });
     
     // Better deduplication by title and author similarity
@@ -1355,63 +1499,50 @@ function copyToClipboard(text){
 }
 
 function findSimilarBooks(book) {
-  // Build a smarter search query based on multiple factors
+  // Build search query using ONLY genre and tags - NO title or author
   let searchTerms = [];
   
-  // Use the best available tags
+  // Use meaningful tags first
   if(book.tags && book.tags.length > 0) {
-    const bestTags = book.tags.filter(tag => 
-      !['other', 'general', 'book', 'books'].includes(tag) &&
-      tag.length > 3
-    ).slice(0, 3);
-    searchTerms.push(...bestTags);
+    const goodTags = book.tags.filter(tag => 
+      tag.length > 3 && 
+      !['other', 'general', 'book', 'books', 'fiction', 'nonfiction'].includes(tag)
+    );
+    searchTerms.push(...goodTags.slice(0, 2));
   }
   
-  // Add genre if it's specific
+  // Add genre if it's specific and useful
   if(book.genre && book.genre !== 'other' && book.genre !== 'fiction') {
     searchTerms.push(book.genre.replace(/-/g, ' '));
   }
   
-  // Add author for "more by this author" results
-  if(book.author && !book.author.toLowerCase().includes('unknown')) {
-    searchTerms.push(`inauthor:"${book.author}"`);
-  }
-  
-  // If we don't have good tags, try extracting themes from the title
-  if(searchTerms.length < 2 && book.title) {
-    const titleWords = book.title.toLowerCase()
-      .split(/\s+/)
-      .filter(word => 
-        word.length > 4 && 
-        !['book', 'novel', 'story', 'tales', 'guide'].includes(word)
-      );
-    if(titleWords.length > 0) {
-      searchTerms.push(titleWords[0]);
-    }
-  }
-  
-  // Fallback to genre-based search
+  // If still no good search terms, use broader genre categories
   if(searchTerms.length === 0) {
-    const genreSearches = {
-      'mystery': 'mystery detective crime',
+    const broadSearches = {
+      'mystery': 'mystery crime detective',
       'thriller': 'thriller suspense',
-      'romance': 'romance love',
-      'fantasy': 'fantasy magic',
-      'sci-fi': 'science fiction',
-      'horror': 'horror scary',
-      'biography': 'biography memoir',
+      'romance': 'romance love story',
+      'fantasy': 'fantasy magic adventure',
+      'sci-fi': 'science fiction space',
+      'horror': 'horror supernatural scary',
+      'biography': 'biography life story',
+      'memoir': 'memoir personal story',
       'history': 'history historical',
-      'business': 'business entrepreneurship',
-      'self-help': 'self-help personal development',
-      'philosophy': 'philosophy ethics'
+      'business': 'business management leadership',
+      'self-help': 'self help personal development',
+      'philosophy': 'philosophy thought ideas',
+      'spirituality/religion': 'religion spiritual faith',
+      'health & fitness': 'health fitness wellness',
+      'cooking': 'cooking recipe food',
+      'travel': 'travel adventure guide'
     };
-    searchTerms.push(genreSearches[book.genre] || book.genre || 'fiction');
+    const fallback = broadSearches[book.genre] || 'popular fiction';
+    searchTerms.push(fallback);
   }
   
-  const finalQuery = searchTerms.slice(0, 4).join(' ');
-  
-  openSearchModal(finalQuery);
-  showToast(`Searching for books similar to "${book.title}"...`);
+  const query = searchTerms.join(' ');
+  openSearchModal(query);
+  showToast(`Finding ${book.genre || 'similar'} books with similar themes...`);
 }
 
 function toggleSynopsis(bookId){
