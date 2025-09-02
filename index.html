@@ -987,9 +987,41 @@ function cleanTags(categories) {
   // Convert to array and limit
   return Array.from(extractedTags).slice(0, 8);
 }
-
 async function searchGoogleBooks(query, maxResults = 20){
   // Focus search on books only, exclude periodicals and articles
+  const bookQuery = `${query} inpublisher:books OR subject:fiction OR subject:literature -inpublisher:newspaper -inpublisher:magazine -inpublisher:journal -inpublisher:periodical`;
+
+  // Valid 'fields' — no 'subjects', and nested paths use slashes
+  const params = new URLSearchParams({
+    q: bookQuery,
+    maxResults: String(maxResults),
+    printType: 'books',
+    orderBy: 'relevance',
+    langRestrict: 'en',
+    fields: 'items(id,volumeInfo/title,volumeInfo/authors,volumeInfo/description,volumeInfo/categories,volumeInfo/imageLinks/thumbnail,volumeInfo/imageLinks/smallThumbnail,volumeInfo/publishedDate,volumeInfo/averageRating,volumeInfo/ratingsCount,volumeInfo/industryIdentifiers,volumeInfo/language,volumeInfo/pageCount),totalItems'
+  });
+
+  let response = await fetch(`${GBOOKS_API}?${params.toString()}`);
+  if (!response.ok) {
+    // Fallback without `fields` in case Google tweaks schema again
+    const fallback = new URLSearchParams({
+      q: bookQuery,
+      maxResults: String(maxResults),
+      printType: 'books',
+      orderBy: 'relevance',
+      langRestrict: 'en'
+    });
+    response = await fetch(`${GBOOKS_API}?${fallback.toString()}`);
+    if (!response.ok) {
+      const txt = await response.text().catch(()=>'');
+      throw new Error(`Search failed (${response.status}). ${txt.slice(0,120)}`);
+    }
+  }
+  return await response.json();
+}
+async function performSearch(){
+  const title = document.getElementById('ext-search-input').value.trim();
+
   const bookQuery = `${query} +inpublisher:books OR +subject:fiction OR +subject:literature -inpublisher:newspaper -inpublisher:magazine -inpublisher:journal -inpublisher:periodical`;
   const url = `${GBOOKS_API}?q=${encodeURIComponent(bookQuery)}&maxResults=${maxResults}&printType=books&fields=items(id,volumeInfo(title,authors,description,categories,subjects,imageLinks,publishedDate,averageRating,ratingsCount,industryIdentifiers,language,publishedDate,pageCount))`;
   const response = await fetch(url);
@@ -1813,12 +1845,16 @@ function initializeApp(){
   document.getElementById('add-book-btn').addEventListener('click', () => openSearchModal());
   document.getElementById('check-releases-btn').addEventListener('click', checkReleases);
 
-  // Search modal
   document.getElementById('ext-search-btn').addEventListener('click', performSearch);
   document.getElementById('ext-close').addEventListener('click', closeSearchModal);
+  ['ext-search-input','ext-search-author'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){ el.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); performSearch(); } }); }
+  });
 
   // Rating modal
   document.getElementById('finish-save').addEventListener('click', saveRating);
+
   document.getElementById('finish-cancel').addEventListener('click', closeRatingModal);
 
   // Goals
