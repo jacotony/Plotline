@@ -589,8 +589,8 @@ function renderBookCard(book){
 
   const synopsisHtml = !collapsed && book.synopsis 
     ? `<div class="book-synopsis" data-book-id="${book.id}">
-         <span class="synopsis-text">${escapeHtml(truncate(book.synopsis, 150))}</span>
-         ${book.synopsis.length > 150 ? `<button class="synopsis-toggle" data-action="toggle-synopsis" data-book-id="${book.id}">Read more</button>` : ''}
+         <span class="synopsis-text">${escapeHtml(book.synopsis.length > 200 ? book.synopsis.slice(0, 200) + '...' : book.synopsis)}</span>
+         ${book.synopsis.length > 200 ? `<button class="synopsis-toggle" data-action="toggle-synopsis" data-book-id="${book.id}">Read more</button>` : ''}
        </div>`
     : '';
 
@@ -1203,9 +1203,15 @@ function addSingleResult(index){
 
 /* ===== Add Book Modal Functions ===== */
 function openAddBookModal(){
-  document.getElementById('add-book-modal').classList.add('show');
+  const modal = document.getElementById('add-book-modal');
+  if(!modal) {
+    console.error('Add book modal not found');
+    return;
+  }
+  modal.classList.add('show');
   document.getElementById('add-search-input').value = '';
-  document.getElementById('add-search-results').style.display = 'none';
+  const results = document.getElementById('add-search-results');
+  if(results) results.style.display = 'none';
   clearManualForm();
 }
 
@@ -1883,13 +1889,33 @@ function initializeApp(){
   document.getElementById('collapse-synopsis').addEventListener('change', renderBooks);
 
   // Action buttons
-  document.getElementById('add-book-btn').addEventListener('click', () => openAddBookModal());
-  document.getElementById('check-releases-btn').addEventListener('click', checkReleases);
+  const addBookBtn = document.getElementById('add-book-btn');
+  const checkReleasesBtn = document.getElementById('check-releases-btn');
+  
+  if(addBookBtn) {
+    addBookBtn.addEventListener('click', () => openAddBookModal());
+  } else {
+    console.error('Add book button not found');
+  }
+  
+  if(checkReleasesBtn) {
+    checkReleasesBtn.addEventListener('click', checkReleases);
+  }
 
-  // Add book modal
-  document.getElementById('add-search-btn').addEventListener('click', performAddSearch);
-  document.getElementById('manual-add-btn').addEventListener('click', addManualBook);
-  document.getElementById('add-book-close').addEventListener('click', closeAddBookModal);
+  // Add book modal event handlers
+  const addSearchBtn = document.getElementById('add-search-btn');
+  const manualAddBtn = document.getElementById('manual-add-btn');
+  const addBookClose = document.getElementById('add-book-close');
+  
+  if(addSearchBtn) {
+    addSearchBtn.addEventListener('click', performAddSearch);
+  }
+  if(manualAddBtn) {
+    manualAddBtn.addEventListener('click', addManualBook);
+  }
+  if(addBookClose) {
+    addBookClose.addEventListener('click', closeAddBookModal);
+  }
 
   // Rating modal
   document.getElementById('finish-save').addEventListener('click', saveRating);
@@ -1928,6 +1954,8 @@ function initializeApp(){
       const action = actionBtn.dataset.action;
       const bookId = actionBtn.dataset.bookId;
       if(action && bookId){
+        e.preventDefault();
+        e.stopPropagation();
         handleBookAction(action, bookId);
         return;
       }
@@ -1936,7 +1964,7 @@ function initializeApp(){
     // Close dropdowns when clicking outside
     if(!e.target.closest('.more-menu')){
       document.querySelectorAll('.dropdown.show').forEach(menu => {
-        menu.classList.remove('show');
+        menu.classList.remove('show', 'left');
       });
     }
 
