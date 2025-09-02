@@ -51,9 +51,9 @@
   .content{background:#fff;border-radius:12px;padding:16px;box-shadow:var(--shadow);border:1px solid var(--line)}
 
   .nav{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-  .nav-btn{background:transparent;color:var(--accent);border:none;padding:8px 10px;border-bottom:2px solid transparent;border-radius:0;font-size:13px;font-weight:800;cursor:pointer}
+  .nav-btn{background:transparent;color:#00635d;border:none;padding:8px 10px;border-bottom:2px solid transparent;border-radius:0;font-size:13px;font-weight:800;cursor:pointer}
+  .nav-btn.active{border-color:#00635d}
   .nav-btn:hover{color:#004f49}
-  .nav-btn.active{border-color:var(--accent)}
 
   .search{display:grid;grid-template-columns:2fr 1fr repeat(3,1fr);gap:8px;margin:8px 0}
   .input,.select,.textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:6px;font-size:16px;background:#fff}
@@ -136,7 +136,7 @@
       <!-- LIBRARY (only main view) -->
       <section id="feed" class="section active">
         <div class="search">
-          <input type="text" class="input" placeholder="Search your library (title, author, tag) — if no match, we’ll fetch & detect the series…" id="search-input"/>
+          <input type="text" class="input" placeholder="Search your library — if no match, we’ll fetch & detect the series…" id="search-input"/>
           <select class="select" id="tag-filter"><option value="">All Tags</option></select>
           <select class="select" id="category-filter"><option value="">All Categories</option></select>
           <select class="select" id="min-rating"><option value="0">Min ★ (Any)</option><option value="5">5★</option><option value="4">4★+</option><option value="3">3★+</option></select>
@@ -456,7 +456,7 @@ function bookCard(book){
     '  <div class="actions">',
     '    <button class="action" type="button" data-action="wish" data-id="'+book.id+'">📚 Want to Read</button>',
     '    <button class="action" type="button" data-action="reading" data-id="'+book.id+'">📖 Start / Currently Reading</button>',
-    '    <button class="action" type="button" data-action="finish" data-id="'+book.id+'">✅ Finish & Rate</button>',
+    '    <button class="action" type="button" data-action="finish" data-id="'+book.id+'">✅ Finish</button>',
     '    <button class="action" type="button" data-action="find-like" data-id="'+book.id+'">🔎 More like this</button>',
     '    <a class="action" href="'+smsHrefForBook(book)+'" data-action="sms" data-id="'+book.id+'">📲 Text</a>',
     '    <button class="action" type="button" data-action="edit" data-id="'+book.id+'">✏️ Edit</button>',
@@ -619,7 +619,7 @@ function volumeToItem(it){
   const seriesGuess = parseSeriesFromTitle(title);
   const seriesNumberGuess = (seriesGuess && seriesGuess.number) ? Number(seriesGuess.number) : null;
 
-  // Popularity score: ratingsCount dominates; averageRating multiplies it.
+  // Popularity score
   const averageRating = Number(v.averageRating || 0);
   const ratingsCount = Number(v.ratingsCount || v.ratingscount || 0);
   const popularity = (averageRating && ratingsCount) ? (averageRating * ratingsCount) : ratingsCount;
@@ -785,7 +785,7 @@ function importJson(file){
   fr.readAsText(file);
 }
 
-/* ===== Finish & Rate (bullet-proof) ===== */
+/* ===== Finish & Rate ===== */
 let ratingDraft = 0;
 let finishContext = null;
 
@@ -803,9 +803,8 @@ function bindStarHit(elFg, elHit, feedbackEl){
     setFromIndex(i);
   });
 }
-
 function openFinishModal(book){
-  finishContext = { bookId: String(book.id) }; // normalize as string
+  finishContext = { bookId: String(book.id) };
   document.getElementById('finish-title').textContent = book.title+' — '+book.author;
 
   const fg  = document.getElementById('finish-fg');
@@ -819,38 +818,38 @@ function openFinishModal(book){
 
   document.getElementById('finish-modal').classList.add('show');
 }
-
 function closeFinishModal(){
   document.getElementById('finish-modal').classList.remove('show');
   finishContext = null;
   ratingDraft = 0;
 }
-
 function saveFinish(){
   if(!finishContext){ showToast('No book selected', true); return; }
   const idx = books.findIndex(b => String(b.id) === String(finishContext.bookId));
   if(idx === -1){ showToast('Book not found', true); closeFinishModal(); return; }
   const book = books[idx];
 
-  // Ensure we have an open session to close
+  // Ensure session exists, then mark finished with rating
   if(book.status !== 'reading'){ startReading(book); }
-
-  // Apply rating (0 allowed)
   const r = Number.isFinite(ratingDraft) ? ratingDraft : 0;
-  book.rating = r;
-  if(!book.sessions) book.sessions = [];
-  if(book.sessions.length === 0) book.sessions.push({startedAt: nowISO()});
-  const cur = book.sessions[book.sessions.length-1];
-  cur.rating = r;
-
-  // Mark as finished now
   finishReading(book, r);
   book.status = 'read';
-
   books[idx] = book;
-  saveAll();
 
+  saveAll();
   closeFinishModal();
+  applyFilters(false);
+  updateStats();
+  showToast('Marked as read!');
+}
+
+/* Instant finish (one click) */
+function finishNow(book){
+  if(!book) return;
+  if(book.status !== 'reading'){ startReading(book); }
+  finishReading(book, Number(book.rating||0)); // rating can be 0; modal can update later
+  book.status = 'read';
+  saveAll();
   applyFilters(false);
   updateStats();
   showToast('Marked as read!');
@@ -972,7 +971,14 @@ document.addEventListener('DOMContentLoaded', function(){
     }
     if(action==='wish'){ var b=findBook(bookId); if(!b) return; setWish(b); saveAll(); applyFilters(false); updateStats(); showToast('Moved to Want to Read'); return; }
     if(action==='reading'){ var b2=findBook(bookId); if(!b2) return; startReading(b2); saveAll(); applyFilters(false); updateStats(); showToast('Marked as Currently Reading'); return; }
-    if(action==='finish'){ var b3=findBook(bookId); if(!b3) return; openFinishModal(b3); return; }
+    if(action==='finish'){
+      var b3=findBook(bookId); if(!b3) return;
+      // Instant mark as read (even if you never touch the stars)
+      finishNow(b3);
+      // Optional rating modal on top
+      openFinishModal(b3);
+      return;
+    }
     if(action==='edit'){ var b4=findBook(bookId); if(!b4) return; var t=prompt('Edit title:', b4.title); if(t==null) return; b4.title=t.trim()||b4.title; var a=prompt('Edit author:', b4.author); if(a==null) return; b4.author=a.trim()||b4.author; saveAll(); applyFilters(false); updateStats(); return; }
     if(action==='delete'){ if(!confirm('Delete this book?')) return; books = books.filter(x=>String(x.id)!==String(bookId)); saveAll(); applyFilters(false); updateStats(); showToast('Deleted'); return; }
     if(action==='find-next'){
