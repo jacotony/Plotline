@@ -1867,6 +1867,10 @@ function initializeApp(){
     applyFilters();
     updateStats();
     loadGoalsUI();
+    
+    // Debug: Check if elements exist
+    console.log('Add book button exists:', !!document.getElementById('add-book-btn'));
+    console.log('Add book modal exists:', !!document.getElementById('add-book-modal'));
   });
 
   // Navigation
@@ -1888,19 +1892,41 @@ function initializeApp(){
   document.getElementById('sort-by').addEventListener('change', () => applyFilters());
   document.getElementById('collapse-synopsis').addEventListener('change', renderBooks);
 
-  // Action buttons
+  // Action buttons - with fallback
   const addBookBtn = document.getElementById('add-book-btn');
   const checkReleasesBtn = document.getElementById('check-releases-btn');
   
   if(addBookBtn) {
-    addBookBtn.addEventListener('click', () => openAddBookModal());
+    addBookBtn.addEventListener('click', () => {
+      console.log('Add book button clicked');
+      openAddBookModal();
+    });
   } else {
-    console.error('Add book button not found');
+    console.error('Add book button not found - looking for alternative');
+    // Try to add the event listener later when the element might exist
+    setTimeout(() => {
+      const btn = document.getElementById('add-book-btn');
+      if(btn) {
+        console.log('Found add book button on retry');
+        btn.addEventListener('click', () => openAddBookModal());
+      } else {
+        console.error('Add book button still not found after retry');
+      }
+    }, 1000);
   }
   
   if(checkReleasesBtn) {
     checkReleasesBtn.addEventListener('click', checkReleases);
   }
+
+  // Also try document-wide click handler as backup
+  document.addEventListener('click', (e) => {
+    if(e.target.id === 'add-book-btn' || e.target.closest('#add-book-btn')) {
+      console.log('Add book clicked via document handler');
+      e.preventDefault();
+      openAddBookModal();
+    }
+  });
 
   // Add book modal event handlers
   const addSearchBtn = document.getElementById('add-search-btn');
