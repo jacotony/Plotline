@@ -86,9 +86,10 @@
   .cover-placeholder{width:80px;height:120px;background:linear-gradient(135deg,var(--paper) 0%,var(--line) 100%);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);flex-shrink:0;border:2px solid var(--line)}
 
   .book-info{flex:1;min-width:0}
-  .book-meta{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+  .book-meta{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
   .genre-chip{background:var(--paper);color:var(--ink);border:1px solid var(--line);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800}
   .series-chip{background:var(--paper-2);border:1px solid var(--accent);color:var(--accent);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:800}
+  .watching-badge{background:#fff8e1;border:1px solid #f0d28a;color:#8a6d00;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800}
 
   .book-title{font-size:1.1rem;font-weight:800;color:var(--ink);line-height:1.3;font-family:Georgia,'Times New Roman',serif;margin-bottom:4px}
   .book-author{color:var(--muted);font-style:italic;margin-bottom:12px;font-size:14px;font-weight:500}
@@ -99,21 +100,23 @@
   .stars .fg{position:absolute;left:0;top:0;white-space:nowrap;color:var(--gold);pointer-events:none;overflow:hidden}
   .rating-text{font-size:13px;color:var(--muted);font-weight:600}
 
-  .book-status{background:var(--paper-2);padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:12px;border-left:4px solid var(--accent)}
+  .book-status{background:var(--paper-2);padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;margin-bottom:6px;border-left:4px solid var(--accent)}
   .book-status.reading{border-left-color:#4CAF50}
   .book-status.wish{border-left-color:#FF9800}
   .book-status.upcoming{border-left-color:#2196F3}
   .book-status.read{border-left-color:var(--gold)}
+
+  .timeline{font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .timeline .dot{width:4px;height:4px;background:var(--line);border-radius:50%;align-self:center}
 
   .book-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
   .tag{background:var(--paper-2);border:1px solid var(--line);color:var(--ink);padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600}
 
   .book-synopsis{color:var(--ink-2);line-height:1.5;font-size:14px;margin-bottom:16px;max-height:60px;overflow:hidden;position:relative}
   .book-synopsis.expanded{max-height:none}
-  .synopsis-fade{position:absolute;bottom:0;left:0;right:0;height:20px;background:linear-gradient(transparent,#fff);pointer-events:none}
   .synopsis-toggle{color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;border:none;background:none;padding:0}
 
-  .book-actions{display:flex;gap:8px;align-items:center}
+  .book-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .action-btn{background:var(--paper);color:var(--accent);border:2px solid var(--line);padding:8px 16px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;transition:all 0.2s ease;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
   .action-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);transform:translateY(-1px)}
   .action-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -164,7 +167,6 @@
   .tag-sug{padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer}
   .tag-sug:last-child{border-bottom:none}
 
-  /* NEW: series companions list in editor */
   .series-list{max-height:220px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px}
   .series-item{display:flex;gap:8px;align-items:center;padding:8px;border-bottom:1px solid var(--paper-2)}
   .series-item:last-child{border-bottom:none}
@@ -387,7 +389,7 @@
               <div id="edit-tag-sugs" class="tag-sugs"></div>
             </div>
 
-            <!-- NEW: Series companions (auto-filled after Pick) -->
+            <!-- Series companions (auto-filled after Pick) -->
             <div id="series-block" style="display:none;margin-top:8px;">
               <label class="prefs-label">Other books in this series</label>
               <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
@@ -426,15 +428,21 @@ function rAll(str, search, replacement){ return String(str).split(search).join(r
 function escapeHtml(s){ s=String(s==null?'':s); s=rAll(s,'&','&amp;'); s=rAll(s,'<','&lt;'); s=rAll(s,'>','&gt;'); return s; }
 function escapeAttr(s){ return rAll(escapeHtml(s),'"','&quot;'); }
 function nowISO(){ return new Date().toISOString(); }
-function formatDate(v){ var n=Number(v); var d=new Date(isFinite(n)?n:v); try{ return d.toLocaleDateString(); }catch(_e){ return d.toISOString().slice(0,10);} }
+function formatDate(v){
+  if(!v) return '';
+  var n=Number(v);
+  var d=new Date(isFinite(n)?n:v);
+  if(isNaN(d)) return '';
+  try{ return d.toLocaleDateString(); }catch(_e){ return d.toISOString().slice(0,10); }
+}
 function showToast(msg,isError){
-  var t=document.getElementById('toast'); 
-  t.textContent=msg; 
+  var t=document.getElementById('toast');
+  t.textContent=msg;
   t.classList.remove('error','success');
   if(isError) t.classList.add('error'); else t.classList.add('success');
-  t.classList.add('show'); 
-  clearTimeout(showToast._t); 
-  showToast._t=setTimeout(function(){ t.classList.remove('show'); }, isError?4000:2500); 
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t=setTimeout(function(){ t.classList.remove('show'); }, isError?4000:2500);
 }
 function truncate(s,n){ s=String(s||''); n=n||300; return s.length>n? s.slice(0,n-1)+'…' : s; }
 function toDateObj(publishedDate){
@@ -484,6 +492,13 @@ async function loadAll(){
       var s=document.getElementById('sync-status'); if(s) s.textContent='Synced';
     }
   }catch(e){ console.warn('Cloud pull failed; using local', e); }
+
+  // Backfill series for older items by parsing title (non-destructive, but persisted once)
+  let dirty=false;
+  for(const b of books){
+    if(!b.series){ const parsed = parseSeriesFromTitle(b.title || ''); if(parsed){ b.series = parsed; dirty = true; } }
+  }
+  if(dirty){ try{ await saveAll(); }catch(_e){} }
 }
 
 async function saveAll(){
@@ -516,27 +531,56 @@ function newBook(obj){
     sessions: [],
     rating: Number(obj.rating||0)||0
   };
-  if(b.status==='wish') b.wantAt=nowISO();
-  if(b.status==='upcoming') { b.wantAt=b.wantAt||nowISO(); }
-  if(b.status==='reading') { b.wantAt=b.wantAt||nowISO(); startReading(b); }
-  if(b.status==='read') { b.wantAt=b.wantAt||nowISO(); startReading(b); finishReading(b, obj.rating||0); }
+  if(b.status==='wish') b.wantAt = b.wantAt || nowISO();
+  if(b.status==='upcoming'){ b.wantAt = b.wantAt || nowISO(); }
+  if(b.status==='reading'){ b.wantAt = b.wantAt || nowISO(); startReading(b); }
+  if(b.status==='read'){ b.wantAt = b.wantAt || nowISO(); startReading(b); finishReading(b, obj.rating||0); }
   return b;
 }
 function startReading(b){
   if(!b.sessions) b.sessions=[];
   const open=b.sessions.find(s=>!s.finishedAt);
   if(open) return;
-  b.sessions.push({startedAt: nowISO()});
-  b.status='reading'; b.startAt = b.sessions[b.sessions.length-1].startedAt;
+  const startedAt = nowISO();
+  b.sessions.push({startedAt});
+  b.status='reading';
+  if(!b.startAt) b.startAt = startedAt;
 }
 function finishReading(b, rating){
   if(!b.sessions || !b.sessions.length) startReading(b);
   const cur=b.sessions[b.sessions.length-1];
   if(!cur.finishedAt) cur.finishedAt=nowISO();
   if(isFinite(rating) && rating>0){ cur.rating = rating; b.rating = rating; }
-  b.status='read'; b.finishAt = cur.finishedAt;
+  b.status='read';
+  if(!b.finishAt) b.finishAt = cur.finishedAt;
 }
 function setWish(b){ b.status='wish'; b.wantAt = b.wantAt || nowISO(); }
+
+/* ===== Series helpers ===== */
+function parseSeriesFromTitle(title){
+  if(!title) return null;
+  // Common patterns: "(Series, #2)", "Book 2 of Series", "#2 (Series)"
+  const patterns = [
+    /\(([^()]+?),\s*#\s*([\d.]+)\)\s*$/i,
+    /Book\s*([\d.]+)\s*(?:of|in)\s*([A-Za-z0-9''\-: ]+)/i,
+    /#\s*([\d.]+)\s*\(([^()]+?)\)\s*$/i
+  ];
+  for(const pattern of patterns){
+    const m = title.match(pattern);
+    if(m){ return { name: (m[2] || m[1]).trim(), number: (m[1] || m[2]).trim() }; }
+  }
+  return null;
+}
+function isWatching(seriesName){
+  if(!seriesName) return false;
+  return Object.prototype.hasOwnProperty.call(sitePrefs.watchSeries, seriesName);
+}
+function toggleWatch(seriesName, author){
+  if(!seriesName) return;
+  if(isWatching(seriesName)){ delete sitePrefs.watchSeries[seriesName]; showToast(`Stopped watching "${seriesName}"`); }
+  else { sitePrefs.watchSeries[seriesName] = author || ''; showToast(`Watching "${seriesName}"`); }
+  saveAll(); updateWatchedSeriesList(); applyFilters();
+}
 
 /* ===== Rendering ===== */
 function starWidthFromRating(r){ r = Math.max(0, Math.min(5, Number(r)||0)); return (r/5*100).toFixed(0)+'%'; }
@@ -560,27 +604,51 @@ function formatStatus(book){
   }
   return `<div class="book-status ${status.class}">${status.text}${extra}</div>`;
 }
+function renderTimeline(book){
+  const bits = [];
+  if(book.addedAt) bits.push(`Added: ${formatDate(book.addedAt)}`);
+  if(book.wantAt) bits.push(`Wishlisted: ${formatDate(book.wantAt)}`);
+  if(book.startAt) bits.push(`Started: ${formatDate(book.startAt)}`);
+  if(book.finishAt) bits.push(`Finished: ${formatDate(book.finishAt)}`);
+  if(book.releaseDate) bits.push(`Release: ${formatDate(book.releaseDate)}`);
+  if(!bits.length) return '';
+  return `<div class="timeline">${bits.map((t,i)=> i? `<span class="dot"></span><span>${escapeHtml(t)}</span>` : `<span>${escapeHtml(t)}</span>`).join('')}</div>`;
+}
 function renderBookCard(book){
+  // Ensure series field if missing (non-persistent here—already backfilled on load)
+  if(!book.series){ const s = parseSeriesFromTitle(book.title); if(s) book.series = s; }
   const starWidth = starWidthFromRating(book.rating || 0);
   const collapsed = document.getElementById('collapse-synopsis')?.checked;
   const goodreadsUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(book.title + ' ' + book.author)}`;
-  const coverHtml = book.image 
+  const coverHtml = book.image
     ? `<a href="${goodreadsUrl}" target="_blank" rel="noopener noreferrer"><img class="book-cover" src="${escapeAttr(book.image)}" alt="Cover of ${escapeAttr(book.title)}" loading="lazy"></a>`
     : `<a href="${goodreadsUrl}" target="_blank" rel="noopener noreferrer"><div class="cover-placeholder">No Cover</div></a>`;
-  const seriesHtml = book.series?.name ? `<span class="series-chip">${escapeHtml(book.series.name)}${book.series.number ? ` #${book.series.number}` : ''}</span>` : '';
+
+  const watching = isWatching(book.series?.name);
+  const seriesHtml = book.series?.name ? `
+    <span class="series-chip">${escapeHtml(book.series.name)}${book.series.number ? ` #${escapeHtml(book.series.number)}` : ''}</span>
+    ${watching ? `<span class="watching-badge">watching</span>` : ``}
+  ` : '';
+
   const tagsHtml = book.tags?.length ? `<div class="book-tags">${book.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>` : '';
-  const synopsisHtml = !collapsed && book.synopsis 
+
+  const synopsisHtml = !collapsed && book.synopsis
     ? `<div class="book-synopsis" data-book-id="${book.id}">
          <span class="synopsis-text">${escapeHtml(book.synopsis.length > 200 ? book.synopsis.slice(0, 200) + '...' : book.synopsis)}</span>
          ${book.synopsis.length > 200 ? `<button class="synopsis-toggle" data-action="toggle-synopsis" data-book-id="${book.id}">Read more</button>` : ''}
        </div>` : '';
+
   const ratingText = book.rating > 0 ? `${book.rating.toFixed(1)} stars` : 'Not rated';
+
   return `
     <div class="book-card" data-book-id="${book.id}">
       <div class="book-header">
         ${coverHtml}
         <div class="book-info">
-          <div class="book-meta"><span class="genre-chip">${escapeHtml(book.genre || 'other')}</span>${seriesHtml}</div>
+          <div class="book-meta">
+            <span class="genre-chip">${escapeHtml(book.genre || 'other')}</span>
+            ${seriesHtml}
+          </div>
           <h3 class="book-title">${escapeHtml(book.title)}</h3>
           <p class="book-author">by ${escapeHtml(book.author)}</p>
           <div class="rating-section">
@@ -588,12 +656,19 @@ function renderBookCard(book){
             <span class="rating-text">${ratingText}</span>
           </div>
           ${formatStatus(book)}
+          ${renderTimeline(book)}
         </div>
       </div>
       ${tagsHtml}
       ${synopsisHtml}
       <div class="book-actions">
         ${getQuickActions(book)}
+        ${book.series?.name ? `
+          <button class="action-btn" data-action="toggle-watch" data-book-id="${book.id}">
+            ${isWatching(book.series.name) ? 'Watching' : 'Watch Series'}
+          </button>
+          <button class="action-btn" data-action="series-add-popup" data-book-id="${book.id}">Add Series Books</button>
+        ` : ``}
         <div class="more-menu">
           <button class="more-btn" data-action="toggle-menu" data-book-id="${book.id}">⋯</button>
           <div class="dropdown" data-book-id="${book.id}">
@@ -646,10 +721,10 @@ function updateStats(){
 /* ===== Filters & Search ===== */
 function populateFilters(){
   const genres = [...new Set(books.map(b => b.genre).filter(Boolean))].sort();
-  document.getElementById('category-filter').innerHTML = '<option value="">All Genres</option>' + 
+  document.getElementById('category-filter').innerHTML = '<option value="">All Genres</option>' +
     genres.map(g => `<option value="${escapeAttr(g)}">${escapeHtml(g)}</option>`).join('');
   const tags = [...new Set(books.flatMap(b => b.tags || []))].sort();
-  document.getElementById('tag-filter').innerHTML = '<option value="">All Tags</option>' + 
+  document.getElementById('tag-filter').innerHTML = '<option value="">All Tags</option>' +
     tags.map(t => `<option value="${escapeAttr(t)}">${escapeHtml(t)}</option>`).join('');
 }
 function bookMatchesSearch(book, query){
@@ -733,20 +808,7 @@ const TAG_SUGGESTIONS = [
   'page-turner','thought-provoking','emotional','inspiring','practical','short-stories','essays'
 ];
 
-/* Parse series from titles like "Title (Series, #2)" etc. */
-function parseSeriesFromTitle(title){
-  if(!title) return null;
-  const patterns = [
-    /\(([^()]+?),\s*#\s*([\d.]+)\)\s*$/i,
-    /Book\s*([\d.]+)\s*(?:of|in)\s*([A-Za-z0-9''\-: ]+)/i,
-    /#\s*([\d.]+)\s*\(([^()]+?)\)\s*$/i
-  ];
-  for(const pattern of patterns){
-    const m = title.match(pattern);
-    if(m){ return { name: (m[2] || m[1]).trim(), number: (m[1] || m[2]).trim() }; }
-  }
-  return null;
-}
+/* Parse series from titles */
 function mapGenre(categories){
   if(!categories || !categories.length) return 'other';
   const cats = categories.join(' ').toLowerCase();
@@ -784,6 +846,24 @@ function cleanTags(categories){
 function recommendTagsFrom(title, synopsis, categories){
   const s = `${title||''} ${synopsis||''}`.toLowerCase();
   const rec = new Set(cleanTags(categories||[]));
+  // Curated phrases (your examples + related)
+  const curated = [
+    [/dark\s+academia/,'dark-academia'],
+    [/academy\s+intrigue|elite\s+academy/,'academy-intrigue'],
+    [/political\s+fantasy|senator|empire|court\s+politics|principalis/,'political-fantasy'],
+    [/espionage|spy|covert|undercover/,'espionage'],
+    [/roman[-\s]inspired|roman[-\s]influenced|senate|legion/,'roman-inspired-world'],
+    [/social\s+hierarchy|caste|rank|nobility/,'social-hierarchy'],
+    [/corruption|bribery|rot|decay/,'corruption'],
+    [/conspiracy|cover[-\s]?up|plot/,'conspiracy'],
+    [/morally\s+gray|morally\s+grey/,'morally-gray-hero'],
+    [/twisty|twists|twist-filled|whiplash/,'twisty-plot'],
+    [/academy|school|campus/,'school-setting'],
+    [/rival|political\s+rival/,'rivals']
+  ];
+  curated.forEach(([re,tag])=>{ if(re.test(s)) rec.add(tag); });
+
+  // Generic hooks
   const PAT = [
     [/award[- ]winning|pulitzer|booker|hugo|nebula/,'award-winning'],
     [/short stories|short-story|collection/,'short-stories'],
@@ -800,10 +880,11 @@ function recommendTagsFrom(title, synopsis, categories){
     [/neuro|brain|cognitive/,'neuroscience']
   ];
   PAT.forEach(([re,tag])=>{ if(re.test(s)) rec.add(tag); });
+
   return Array.from(rec).slice(0,12);
 }
 
-/* --- EN-only search with advanced query support --- */
+/* Core Google Books search */
 async function searchGoogleBooksEnglish(query, author, maxResults=15, opts={}){
   let qParts=[];
   if(opts.customQ){
@@ -815,13 +896,14 @@ async function searchGoogleBooksEnglish(query, author, maxResults=15, opts={}){
   }
   if(opts.excludeTitle){ qParts.push(`-intitle:"${opts.excludeTitle}"`); }
   if(Array.isArray(opts.subjects)){ opts.subjects.forEach(s => { if(s) qParts.push(`subject:"${s}"`); }); }
-  const url = `${GBOOKS_API}?q=${encodeURIComponent(qParts.join(' ').trim())}&maxResults=${maxResults}&printType=${opts.printType||'books'}&orderBy=relevance&langRestrict=en`;
+  const orderBy = opts.orderBy || 'relevance';
+  const url = `${GBOOKS_API}?q=${encodeURIComponent(qParts.join(' ').trim())}&maxResults=${maxResults}&printType=${opts.printType||'books'}&orderBy=${orderBy}&langRestrict=en`;
   const resp = await fetch(url);
   if(!resp.ok) throw new Error('Search failed');
   const data = await resp.json();
   const items = (data.items || []).filter(it => {
     const lang = (it.volumeInfo && it.volumeInfo.language || 'en').toLowerCase();
-    return lang.startsWith('en'); // enforce English
+    return lang.startsWith('en');
   });
   return items.map(item => {
     const v = item.volumeInfo || {};
@@ -835,10 +917,39 @@ async function searchGoogleBooksEnglish(query, author, maxResults=15, opts={}){
       image: img,
       categories: v.categories || [],
       publishedDate: v.publishedDate || '',
+      averageRating: v.averageRating || 0,
+      ratingsCount: v.ratingsCount || 0,
       series,
       language: (v.language || 'en').toLowerCase()
     };
   });
+}
+
+/* Composite keyword search: popular + newest */
+async function keywordCompositeSearch(query, max=18){
+  const q = query.trim();
+  const [rel, newest] = await Promise.all([
+    searchGoogleBooksEnglish(q, '', max, { orderBy: 'relevance' }),
+    searchGoogleBooksEnglish(q, '', max, { orderBy: 'newest' })
+  ]);
+  // Dedup by normalized title + primary author
+  const key = (r)=> (r.title||'').toLowerCase().replace(/\s+/g,' ').trim() + '|' + (r.authors||'').split(',')[0].toLowerCase().trim();
+  const map = new Map();
+  [...rel, ...newest].forEach(r => { const k=key(r); if(!map.has(k)) map.set(k,r); });
+  const merged = Array.from(map.values());
+  // Score: rating strength + log(ratingsCount) + recency bonus
+  const now = new Date();
+  function score(r){
+    const avg = Number(r.averageRating||0);
+    const cnt = Number(r.ratingsCount||0);
+    const dt = toDateObj(r.publishedDate);
+    const ageYears = dt ? Math.max(0, (now - dt)/(365*24*3600*1000)) : 5;
+    const pop = avg * Math.log10(cnt + 10); // stabilizer
+    const recency = 1/(1+ageYears);
+    return pop*2 + recency; // weight popularity higher
+  }
+  merged.sort((a,b)=> score(b)-score(a));
+  return merged.slice(0, max);
 }
 
 /* Results rendering */
@@ -856,11 +967,15 @@ function renderSearchResults(){
       <div class="result-info">
         <div class="result-title">${escapeHtml(r.title)}</div>
         <div class="result-meta">by ${escapeHtml(r.authors || 'Unknown')}</div>
-        <div class="result-meta">${r.categories && r.categories[0] ? escapeHtml(r.categories[0]) : '—'} ${r.publishedDate ? ' • '+escapeHtml(r.publishedDate) : ''}</div>
+        <div class="result-meta">
+          ${(r.series && r.series.name) ? `Series: ${escapeHtml(r.series.name)}${r.series.number?` #${escapeHtml(r.series.number)}`:''} • ` : ``}
+          ${r.categories && r.categories[0] ? escapeHtml(r.categories[0]) : '—'}
+          ${r.publishedDate ? ' • '+escapeHtml(r.publishedDate) : ''}
+        </div>
       </div>
       <button class="action-btn pick-btn" data-pick="${idx}" type="button">Pick</button>
     </div>`).join('');
-  counter.textContent = `${gbResults.length} result${gbResults.length===1?'':'s'}`;
+  counter.textContent = `${gbResults.length} result${gbResults.length===1?'':''} `;
 }
 
 /* Modal open/close */
@@ -885,8 +1000,18 @@ async function performSearch(){
   const list = document.getElementById('search-results');
   if(title.length < 2){ list.innerHTML = ''; document.getElementById('ext-result-count').textContent='0 results'; gbResults=[]; return; }
   list.innerHTML = '<div class="result-item"><div class="result-info"><div class="result-title">Searching…</div></div></div>';
-  try{ gbResults = await searchGoogleBooksEnglish(title, author, 18); renderSearchResults(); }
-  catch(e){ list.innerHTML = '<div class="result-item"><div class="result-info"><div class="result-title" style="color:#b74a4a">Search failed. Please try again.</div></div></div>'; gbResults = []; document.getElementById('ext-result-count').textContent = '0 results'; }
+  try{
+    if(author){
+      gbResults = await searchGoogleBooksEnglish(title, author, 18, { orderBy: 'relevance' });
+    } else {
+      // Keyword-only: composite popularity + newest
+      gbResults = await keywordCompositeSearch(title, 18);
+    }
+    renderSearchResults();
+  } catch(e){
+    list.innerHTML = '<div class="result-item"><div class="result-info"><div class="result-title" style="color:#b74a4a">Search failed. Please try again.</div></div></div>';
+    gbResults = []; document.getElementById('ext-result-count').textContent = '0 results';
+  }
 }
 
 /* ===== Tags (Your + Recommended) ===== */
@@ -913,8 +1038,7 @@ function recomputeRecommended(){
 }
 
 /* ===== Series companions (auto after Pick) ===== */
-let seriesCache = []; // store last companions
-
+let seriesCache = [];
 function resetSeriesBlock(){
   seriesCache = [];
   document.getElementById('series-list').innerHTML = '';
@@ -923,7 +1047,8 @@ function resetSeriesBlock(){
 function seriesRowHtml(item, idx){
   const img = item.image ? `<img src="${escapeAttr(item.image)}" class="series-cover" alt="">` : '<div class="series-cover" style="background:var(--line)"></div>';
   const rel = item.publishedDate ? ` • ${escapeHtml(item.publishedDate)}` : '';
-  const upcoming = item.isUpcoming ? ' — Upcoming' : '';
+  const dt = toDateObj(item.publishedDate);
+  const upcoming = dt && dt > new Date() ? ' — Upcoming' : '';
   return `<div class="series-item">
     <input type="checkbox" data-series-index="${idx}"/>
     ${img}
@@ -944,18 +1069,31 @@ async function fetchSeriesCompanions(seriesName, author){
   if(!seriesName) { resetSeriesBlock(); return; }
   try{
     const built = `intitle:"${seriesName}"${author?` inauthor:"${author}"`:''}`;
-    const raw = await searchGoogleBooksEnglish('', '', 30, { customQ: built });
-    // Keep only same-series matches by parsed series name, and exclude exact same title as current selection
+    const raw = await searchGoogleBooksEnglish('', '', 30, { customQ: built, orderBy: 'relevance' });
     const nameLC = seriesName.toLowerCase();
+    // Filter: parsed series name contains/equals, exclude identical title to gbSelected if present
     const filtered = raw.filter(x => {
       const sn = (x.series && x.series.name || '').toLowerCase();
-      const titleLC = (x.title||'').toLowerCase();
-      return (sn && (sn.includes(nameLC) || nameLC.includes(sn)));
+      return sn && (sn.includes(nameLC) || nameLC.includes(sn));
     });
-    seriesCache = filtered.map(it => {
+    // Dedup by title + primary author
+    const uniq = new Map();
+    filtered.forEach(x => {
+      const k = (x.title||'').toLowerCase().trim() + '|' + (x.authors||'').split(',')[0].toLowerCase().trim();
+      if(!uniq.has(k)) uniq.set(k,x);
+    });
+    seriesCache = Array.from(uniq.values()).map(it => {
       const dt = toDateObj(it.publishedDate);
       const future = dt && dt > new Date();
       return Object.assign({}, it, { isUpcoming: !!future });
+    });
+    // Sort: by series number (if parsed) then by publishedDate
+    seriesCache.sort((a,b) => {
+      const an = parseFloat(a.series?.number||'9999'), bn = parseFloat(b.series?.number||'9999');
+      if(!isNaN(an) && !isNaN(bn) && an!==bn) return an-bn;
+      const ad = toDateObj(a.publishedDate)||new Date(0);
+      const bd = toDateObj(b.publishedDate)||new Date(0);
+      return ad - bd;
     });
     renderSeriesList();
   }catch(e){
@@ -1015,7 +1153,7 @@ function confirmAddFromEdit(){
 
   books.unshift(book);
 
-  // Watch series toggle
+  // Watch series toggle from modal
   const watch = document.getElementById('ext-watch').checked;
   if(watch && book.series?.name){ sitePrefs.watchSeries[book.series.name] = book.author; }
 
@@ -1052,23 +1190,20 @@ function addSelectedSeries(){
   saveAll(); populateFilters(); applyFilters(); updateStats(); showToast('Series books added');
 }
 
-/* ===== Find Similar (smart query: author + strong tags, not "popular") ===== */
+/* ===== Find Similar ===== */
 function strongestTagsFor(book){
   const generic = new Set(['other','fiction','nonfiction','novel','book','general']);
   const tags = (book.tags || []).filter(t => t && t.length>2 && !generic.has(t));
-  // prefer topical tags first, then genre
   return tags.slice(0,3);
 }
 async function runSimilarForBook(book){
-  openSearchModal(); // open modal first
+  openSearchModal();
   const author = (book.author||'').split(',')[0];
   const tags = strongestTagsFor(book);
-  // Build advanced query: author + subjects for tags, exclude current title
   const customQ = `inauthor:"${author}" ${tags.map(t=>`subject:"${t.replace(/"/g,'')}"`).join(' ')} -intitle:"${book.title.replace(/"/g,'')}"`;
   try{
-    gbResults = await searchGoogleBooksEnglish('', '', 18, { customQ });
+    gbResults = await searchGoogleBooksEnglish('', '', 18, { customQ, orderBy: 'relevance' });
     renderSearchResults();
-    // Prefill top bar fields for visibility (optional)
     document.getElementById('ext-search-input').value = tags.join(' ');
     document.getElementById('ext-search-author').value = author;
   }catch(e){
@@ -1086,7 +1221,7 @@ async function checkReleases(){
     try{
       const author = sitePrefs.watchSeries[seriesName] || '';
       const built = `intitle:"${seriesName}"${author?` inauthor:"${author}"`:''}`;
-      const data = await searchGoogleBooksEnglish('', '', 20, { customQ: built });
+      const data = await searchGoogleBooksEnglish('', '', 20, { customQ: built, orderBy: 'newest' });
       const now = new Date();
       const upcoming = data
         .map(it => ({ title: it.title, releaseDate: toDateObj(it.publishedDate) }))
@@ -1115,6 +1250,28 @@ function handleBookAction(action, bookId){
     case 'share': shareBook(book); break;
     case 'toggle-synopsis': toggleSynopsis(bookId); break;
     case 'toggle-menu': toggleDropdownMenu(bookId); break;
+    case 'toggle-watch':
+      if(book.series?.name){
+        const wasWatching = isWatching(book.series.name);
+        toggleWatch(book.series.name, book.author);
+        // On enabling, optionally offer to add others from series
+        if(!wasWatching){
+          const yes = confirm(`Add other books from "${book.series.name}" now?`);
+          if(yes){
+            openSearchModal();
+            const primaryAuthor = (book.author||'').split(',')[0] || '';
+            fetchSeriesCompanions(book.series.name, primaryAuthor);
+          }
+        }
+      }
+      break;
+    case 'series-add-popup':
+      if(book.series?.name){
+        openSearchModal();
+        const primaryAuthor = (book.author||'').split(',')[0] || '';
+        fetchSeriesCompanions(book.series.name, primaryAuthor);
+      }
+      break;
   }
 }
 function editBook(book){
@@ -1122,6 +1279,8 @@ function editBook(book){
   const newAuthor = prompt('Edit author:', book.author); if(newAuthor === null) return;
   book.title = newTitle.trim() || book.title;
   book.author = newAuthor.trim() || book.author;
+  // keep series auto-parse on edit
+  book.series = parseSeriesFromTitle(book.title) || book.series || null;
   saveAll(); applyFilters(); showToast('Book updated');
 }
 function shareBook(book){
@@ -1194,8 +1353,12 @@ function saveRating(){
 
 /* ===== Export/Import/Goals ===== */
 function exportCSV(){
-  const headers = ['Title','Author','Genre','Rating','Status','Tags','Added Date','Release Date','Series'];
-  const rows = books.map(book => [book.title, book.author, book.genre, book.rating || 0, book.status, (book.tags || []).join('; '), formatDate(book.addedAt), book.releaseDate||'', (book.series && book.series.name) || '']);
+  const headers = ['Title','Author','Genre','Rating','Status','Tags','Added','Wishlisted','Started','Finished','Release','Series'];
+  const rows = books.map(book => [
+    book.title, book.author, book.genre, book.rating || 0, book.status, (book.tags || []).join('; '),
+    formatDate(book.addedAt), formatDate(book.wantAt), formatDate(book.startAt), formatDate(book.finishAt), formatDate(book.releaseDate),
+    (book.series && (book.series.name + (book.series.number? ` #${book.series.number}`:''))) || ''
+  ]);
   const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
   downloadFile('plotline-books.csv', csv, 'text/csv');
 }
@@ -1296,9 +1459,9 @@ function initializeApp(){
 
   // Pick result (delegate)
   document.getElementById('search-results').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-pick]'); 
+    const btn = e.target.closest('[data-pick]');
     if(btn){
-      const idx = parseInt(btn.getAttribute('data-pick'),10); 
+      const idx = parseInt(btn.getAttribute('data-pick'),10);
       loadResultIntoEdit(idx);
       return;
     }
@@ -1353,7 +1516,7 @@ function initializeApp(){
     const base = [...new Set([...TAG_SUGGESTIONS, ...recoTags])];
     if(!q){
       const initial = base.filter(t=>!gbTags.includes(t)).slice(0,8);
-      if(initial.length){ sugBox.innerHTML = initial.map(t => `<div class="tag-sug" data-tag="${escapeAttr(t)}">${escapeHtml(t)}</div>`).join(''); sugBox.style.display='block'; } 
+      if(initial.length){ sugBox.innerHTML = initial.map(t => `<div class="tag-sug" data-tag="${escapeAttr(t)}">${escapeHtml(t)}</div>`).join(''); sugBox.style.display='block'; }
       else sugBox.style.display='none';
       return;
     }
@@ -1433,6 +1596,13 @@ async function cloudPush(){ await saveAll(); showToast('Pushed to cloud'); }
 /* Boot */
 if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', initializeApp); }
 else { initializeApp(); }
+
+function resetEdit(){
+  gbSelected=null; gbTags=[]; recoTags=[];
+  renderEditTags(); renderRecommendedTags();
+  document.getElementById('edit-panel').style.display='none';
+  document.getElementById('edit-empty').style.display='block';
+}
 </script>
 </body>
 </html>
