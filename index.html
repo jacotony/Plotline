@@ -128,11 +128,7 @@
   .dropdown-item{display:block;padding:12px 16px;color:var(--ink);text-decoration:none;font-size:14px;font-weight:500;border:none;background:none;width:100%;text-align:left;cursor:pointer;transition:background 0.2s ease;white-space:nowrap}
   .dropdown-item:hover{background:var(--paper-2)}
 
-  /* Force dropdown above everything on iOS */
-  @supports (-webkit-touch-callout: none) {
-    .dropdown{z-index:99999;position:fixed}
-    .dropdown.show{position:absolute}
-  }
+  @supports (-webkit-touch-callout: none) { .dropdown{z-index:99999;position:fixed} .dropdown.show{position:absolute} }
 
   .toast{position:fixed;bottom:24px;right:24px;background:#2a2a2a;color:#fff;padding:16px 20px;border-radius:12px;opacity:0;transform:translateY(20px);transition:all 0.3s ease;pointer-events:none;z-index:9999;max-width:400px;box-shadow:var(--shadow-hover);font-weight:500}
   .toast.show{opacity:1;transform:translateY(0)}
@@ -193,26 +189,11 @@
     </header>
 
     <div class="stats" id="stats">
-      <div class="stat">
-        <strong id="total-books">0</strong>
-        <span>Total Books</span>
-      </div>
-      <div class="stat">
-        <strong id="books-read">0</strong>
-        <span>Completed</span>
-      </div>
-      <div class="stat">
-        <strong id="read-month">0</strong>
-        <span>This Month</span>
-      </div>
-      <div class="stat">
-        <strong id="read-year">0</strong>
-        <span>This Year</span>
-      </div>
-      <div class="stat">
-        <strong id="avg-rating">0.0</strong>
-        <span>Avg Rating</span>
-      </div>
+      <div class="stat"><strong id="total-books">0</strong><span>Total Books</span></div>
+      <div class="stat"><strong id="books-read">0</strong><span>Completed</span></div>
+      <div class="stat"><strong id="read-month">0</strong><span>This Month</span></div>
+      <div class="stat"><strong id="read-year">0</strong><span>This Year</span></div>
+      <div class="stat"><strong id="avg-rating">0.0</strong><span>Avg Rating</span></div>
     </div>
 
     <main class="content">
@@ -245,17 +226,14 @@
               <input type="checkbox" id="collapse-synopsis" style="margin-right:8px;"> 
               Hide Synopses
             </label>
-            <button class="action-btn" id="check-releases-btn" type="button">
-              Check New Releases
-            </button>
+            <button class="action-btn" id="check-releases-btn" type="button">Check New Releases</button>
+            <button class="action-btn" id="add-book-btn" type="button">+ Add Book</button>
           </div>
         </div>
 
         <div class="results-bar">
           <div class="results-info" id="result-count">Loading...</div>
-          <div class="results-controls">
-            <button class="action-btn" id="add-book-btn" type="button">+ Add Book</button>
-          </div>
+          <div class="results-controls"></div>
         </div>
 
         <div id="books-feed" class="feed"></div>
@@ -271,26 +249,11 @@
         <div class="prefs-section">
           <h3 class="prefs-title">Reading Goals</h3>
           <div class="prefs-grid">
-            <div class="prefs-field">
-              <label class="prefs-label">Year</label>
-              <input id="goal-year" class="input" type="number"/>
-            </div>
-            <div class="prefs-field">
-              <label class="prefs-label">Total Books</label>
-              <input id="goal-total" class="input" type="number"/>
-            </div>
-            <div class="prefs-field">
-              <label class="prefs-label">Catholic Books</label>
-              <input id="goal-catholic" class="input" type="number"/>
-            </div>
-            <div class="prefs-field">
-              <label class="prefs-label">Fiction</label>
-              <input id="goal-fiction" class="input" type="number"/>
-            </div>
-            <div class="prefs-field">
-              <label class="prefs-label">Non-Fiction</label>
-              <input id="goal-nonfiction" class="input" type="number"/>
-            </div>
+            <div class="prefs-field"><label class="prefs-label">Year</label><input id="goal-year" class="input" type="number"/></div>
+            <div class="prefs-field"><label class="prefs-label">Total Books</label><input id="goal-total" class="input" type="number"/></div>
+            <div class="prefs-field"><label class="prefs-label">Catholic Books</label><input id="goal-catholic" class="input" type="number"/></div>
+            <div class="prefs-field"><label class="prefs-label">Fiction</label><input id="goal-fiction" class="input" type="number"/></div>
+            <div class="prefs-field"><label class="prefs-label">Non-Fiction</label><input id="goal-nonfiction" class="input" type="number"/></div>
           </div>
           <button id="save-goals" class="action-btn primary" type="button">Save Goals</button>
         </div>
@@ -301,8 +264,7 @@
           <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
             <button id="export-csv-btn" class="action-btn" type="button">Download CSV</button>
             <button id="export-json-btn" class="action-btn" type="button">Download JSON</button>
-            <label class="action-btn" style="cursor:pointer">
-              Import Data
+            <label class="action-btn" style="cursor:pointer">Import Data
               <input type="file" id="import-json" accept="application/json" style="display:none">
             </label>
           </div>
@@ -317,14 +279,8 @@
             </div>
           </div>
           <div class="prefs-grid" style="margin-bottom:16px;">
-            <div class="prefs-field">
-              <label class="prefs-label">API Key</label>
-              <input id="cloud-api" class="input" placeholder="Enter JSONBin API key" type="password"/>
-            </div>
-            <div class="prefs-field">
-              <label class="prefs-label">Bin ID</label>
-              <input id="cloud-bin" class="input" placeholder="Enter Bin ID"/>
-            </div>
+            <div class="prefs-field"><label class="prefs-label">API Key</label><input id="cloud-api" class="input" placeholder="Enter JSONBin API key" type="password"/></div>
+            <div class="prefs-field"><label class="prefs-label">Bin ID</label><input id="cloud-bin" class="input" placeholder="Enter Bin ID"/></div>
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;">
             <button id="cloud-save" class="action-btn" type="button">Save Config</button>
@@ -354,12 +310,12 @@
     </div>
   </div>
 
-  <!-- Search Modal (REWORKED) -->
+  <!-- Search Modal (LIVE TYPEAHEAD + TAG RECS) -->
   <div id="search-modal" class="modal search-modal">
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">Add New Books</h3>
-        <p class="modal-subtitle">Google Books (English-only). Pick a result to edit before adding.</p>
+        <p class="modal-subtitle">Google Books (English-only). Type to search. Pick a result, edit, choose destination, then confirm.</p>
       </div>
 
       <div class="search-grid">
@@ -387,24 +343,12 @@
           <div id="edit-panel" class="edit-panel">
             <h4 style="margin-bottom:8px">Edit & Place</h4>
             <div class="grid-2" style="margin-bottom:8px;">
-              <div>
-                <label class="prefs-label">Title</label>
-                <input id="edit-title" class="input" />
-              </div>
-              <div>
-                <label class="prefs-label">Author(s)</label>
-                <input id="edit-author" class="input" />
-              </div>
+              <div><label class="prefs-label">Title</label><input id="edit-title" class="input" /></div>
+              <div><label class="prefs-label">Author(s)</label><input id="edit-author" class="input" /></div>
             </div>
             <div class="grid-3" style="margin-bottom:8px;">
-              <div>
-                <label class="prefs-label">Genre</label>
-                <input id="edit-genre" class="input" placeholder="e.g. fantasy, history"/>
-              </div>
-              <div>
-                <label class="prefs-label">Cover URL</label>
-                <input id="edit-image" class="input" placeholder="https://…"/>
-              </div>
+              <div><label class="prefs-label">Genre</label><input id="edit-genre" class="input" placeholder="e.g. fantasy, history"/></div>
+              <div><label class="prefs-label">Cover URL</label><input id="edit-image" class="input" placeholder="https://…"/></div>
               <div>
                 <label class="prefs-label">Destination</label>
                 <select id="edit-dest" class="select">
@@ -419,25 +363,31 @@
               <label class="prefs-label">Synopsis</label>
               <textarea id="edit-synopsis" class="textarea" placeholder="Description…"></textarea>
             </div>
+
+            <!-- New: Recommended Tags -->
+            <div style="margin:8px 0;">
+              <label class="prefs-label">Recommended Tags</label>
+              <div id="edit-tags-reco" class="tags"></div>
+            </div>
+
             <div style="position:relative;margin-bottom:8px;">
-              <label class="prefs-label">Tags</label>
+              <label class="prefs-label">Your Tags</label>
               <div class="tags-wrap">
                 <div id="edit-tags" class="tags"></div>
                 <input id="edit-tag-input" class="input" placeholder="Add tags… (Enter/Tab/Comma)" style="border:0;background:transparent;padding:6px 0;"/>
               </div>
               <div id="edit-tag-sugs" class="tag-sugs"></div>
             </div>
+
             <div class="grid-2" style="align-items:center;margin-top:6px;">
-              <div class="small" style="color:var(--muted)">Nothing will be added until you confirm.</div>
+              <div class="small" style="color:var(--muted)">Nothing is added until you confirm.</div>
               <div style="justify-self:end;display:flex;gap:8px;">
                 <button id="edit-reset" class="action-btn" type="button">Reset</button>
                 <button id="edit-confirm" class="action-btn primary" type="button">Confirm Add</button>
               </div>
             </div>
           </div>
-          <div id="edit-empty" class="small" style="color:var(--muted);padding:8px 0;">
-            Pick a result on the left to edit it here.
-          </div>
+          <div id="edit-empty" class="small" style="color:var(--muted);padding:8px 0;">Pick a result on the left to edit it here.</div>
         </div>
       </div>
     </div>
@@ -459,8 +409,7 @@ function showToast(msg,isError){
   var t=document.getElementById('toast'); 
   t.textContent=msg; 
   t.classList.remove('error','success');
-  if(isError) t.classList.add('error');
-  else t.classList.add('success');
+  if(isError) t.classList.add('error'); else t.classList.add('success');
   t.classList.add('show'); 
   clearTimeout(showToast._t); 
   showToast._t=setTimeout(function(){ t.classList.remove('show'); }, isError?4000:2500); 
@@ -474,6 +423,7 @@ function toDateObj(publishedDate){
   return isNaN(dt.getTime())? null : dt;
 }
 function isiOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; }
+function debounce(fn, delay){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), delay); }; }
 
 /* ===== Storage / Cloud (JSONBin v3) ===== */
 const DEFAULT_JSONBIN_API = 'https://api.jsonbin.io/v3';
@@ -526,41 +476,6 @@ async function saveAll(){
   }catch(e){ console.warn('Remote save failed',e); var s2=document.getElementById('sync-status'); if(s2) s2.textContent='Sync failed'; }
 }
 
-async function cloudPull(){ 
-  document.getElementById('sync-status').textContent='Pulling...'; 
-  await loadAll(); 
-  applyFilters(); 
-  updateStats(); 
-  showToast('Data pulled from cloud'); 
-}
-
-async function cloudPush(){ 
-  try{ 
-    document.getElementById('sync-status').textContent='Pushing...'; 
-    await saveAll(); 
-    showToast('Data pushed to cloud'); 
-  }catch(e){ 
-    document.getElementById('sync-status').textContent='Sync failed'; 
-    showToast(e.message||'Push failed',true);
-  } 
-}
-
-async function cloudCreate(){
-  try{
-    document.getElementById('sync-status').textContent = 'Creating...';
-    const initial = { plotline: { books, sitePrefs } };
-    const r=await fetch(`${getApiBase()}/b`,{method:'POST',headers: jbHeaders(),body:JSON.stringify(initial)});
-    if(!r.ok){ const txt = await r.text(); throw new Error(`Create ${r.status}: ${txt.slice(0,140)}`); }
-    const data=await r.json();
-    const newId=(data.metadata && data.metadata.id)||data.id;
-    if(!newId) throw new Error('No Bin ID returned');
-    localStorage.setItem('plotline_bin_id', newId);
-    document.getElementById('cloud-bin').value = newId;
-    showToast('New JSONBin created: '+newId);
-    document.getElementById('sync-status').textContent='Created';
-  }catch(e){ console.warn(e); document.getElementById('sync-status').textContent='Create failed'; showToast(e.message||'Create failed',true); }
-}
-
 /* ===== Data Model Helpers ===== */
 function newBook(obj){
   const id=Date.now()+Math.floor(Math.random()*1000);
@@ -585,7 +500,6 @@ function newBook(obj){
   if(b.status==='read') { b.wantAt=b.wantAt||nowISO(); startReading(b); finishReading(b, obj.rating||0); }
   return b;
 }
-
 function startReading(b){
   if(!b.sessions) b.sessions=[];
   const open=b.sessions.find(s=>!s.finishedAt);
@@ -593,7 +507,6 @@ function startReading(b){
   b.sessions.push({startedAt: nowISO()});
   b.status='reading'; b.startAt = b.sessions[b.sessions.length-1].startedAt;
 }
-
 function finishReading(b, rating){
   if(!b.sessions || !b.sessions.length) startReading(b);
   const cur=b.sessions[b.sessions.length-1];
@@ -601,12 +514,10 @@ function finishReading(b, rating){
   if(isFinite(rating) && rating>0){ cur.rating = rating; b.rating = rating; }
   b.status='read'; b.finishAt = cur.finishedAt;
 }
-
 function setWish(b){ b.status='wish'; b.wantAt = b.wantAt || nowISO(); }
 
 /* ===== Rendering ===== */
 function starWidthFromRating(r){ r = Math.max(0, Math.min(5, Number(r)||0)); return (r/5*100).toFixed(0)+'%'; }
-
 function formatStatus(book){
   const statusMap = {
     reading: { text: 'Currently Reading', class: 'reading' },
@@ -615,63 +526,37 @@ function formatStatus(book){
     read: { text: 'Completed', class: 'read' }
   };
   const status = statusMap[book.status] || statusMap.wish;
-  
   let extra = '';
-  if(book.status === 'read' && book.finishAt) {
-    extra = ` • ${formatDate(book.finishAt)}`;
-  }
-  if(book.status === 'reading' && book.startAt) {
-    extra = ` • Started ${formatDate(book.startAt)}`;
-  }
-  if(book.status === 'upcoming' && book.releaseDate) {
-    extra = ` • ${formatDate(book.releaseDate)}`;
-  }
-  
+  if(book.status === 'read' && book.finishAt) extra = ` • ${formatDate(book.finishAt)}`;
+  if(book.status === 'reading' && book.startAt) extra = ` • Started ${formatDate(book.startAt)}`;
+  if(book.status === 'upcoming' && book.releaseDate) extra = ` • ${formatDate(book.releaseDate)}`;
   return `<div class="book-status ${status.class}">${status.text}${extra}</div>`;
 }
-
 function renderBookCard(book){
   const starWidth = starWidthFromRating(book.rating || 0);
   const collapsed = document.getElementById('collapse-synopsis')?.checked;
   const goodreadsUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(book.title + ' ' + book.author)}`;
-  
   const coverHtml = book.image 
     ? `<a href="${goodreadsUrl}" target="_blank" rel="noopener noreferrer"><img class="book-cover" src="${escapeAttr(book.image)}" alt="Cover of ${escapeAttr(book.title)}" loading="lazy"></a>`
     : `<a href="${goodreadsUrl}" target="_blank" rel="noopener noreferrer"><div class="cover-placeholder">No Cover</div></a>`;
-
-  const seriesHtml = book.series?.name 
-    ? `<span class="series-chip">${escapeHtml(book.series.name)}${book.series.number ? ` #${book.series.number}` : ''}</span>`
-    : '';
-
-  const tagsHtml = book.tags?.length 
-    ? `<div class="book-tags">${book.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>`
-    : '';
-
+  const seriesHtml = book.series?.name ? `<span class="series-chip">${escapeHtml(book.series.name)}${book.series.number ? ` #${book.series.number}` : ''}</span>` : '';
+  const tagsHtml = book.tags?.length ? `<div class="book-tags">${book.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>` : '';
   const synopsisHtml = !collapsed && book.synopsis 
     ? `<div class="book-synopsis" data-book-id="${book.id}">
          <span class="synopsis-text">${escapeHtml(book.synopsis.length > 200 ? book.synopsis.slice(0, 200) + '...' : book.synopsis)}</span>
          ${book.synopsis.length > 200 ? `<button class="synopsis-toggle" data-action="toggle-synopsis" data-book-id="${book.id}">Read more</button>` : ''}
-       </div>`
-    : '';
-
+       </div>` : '';
   const ratingText = book.rating > 0 ? `${book.rating.toFixed(1)} stars` : 'Not rated';
-
   return `
     <div class="book-card" data-book-id="${book.id}">
       <div class="book-header">
         ${coverHtml}
         <div class="book-info">
-          <div class="book-meta">
-            <span class="genre-chip">${escapeHtml(book.genre || 'other')}</span>
-            ${seriesHtml}
-          </div>
+          <div class="book-meta"><span class="genre-chip">${escapeHtml(book.genre || 'other')}</span>${seriesHtml}</div>
           <h3 class="book-title">${escapeHtml(book.title)}</h3>
           <p class="book-author">by ${escapeHtml(book.author)}</p>
           <div class="rating-section">
-            <div class="stars">
-              <div class="bg">★★★★★</div>
-              <div class="fg" style="width:${starWidth}">★★★★★</div>
-            </div>
+            <div class="stars"><div class="bg">★★★★★</div><div class="fg" style="width:${starWidth}">★★★★★</div></div>
             <span class="rating-text">${ratingText}</span>
           </div>
           ${formatStatus(book)}
@@ -691,22 +576,15 @@ function renderBookCard(book){
           </div>
         </div>
       </div>
-    </div>
-  `;
+    </div>`;
 }
-
 function getQuickActions(book){
   switch(book.status){
-    case 'wish':
-      return `<button class="action-btn primary" data-action="start-reading" data-book-id="${book.id}">Start Reading</button>`;
-    case 'reading':
-      return `<button class="action-btn primary" data-action="finish-reading" data-book-id="${book.id}">Mark Complete</button>`;
-    case 'read':
-      return `<button class="action-btn" data-action="rate" data-book-id="${book.id}">Rate Again</button>`;
-    case 'upcoming':
-      return `<button class="action-btn" data-action="wish" data-book-id="${book.id}">Add to Wishlist</button>`;
-    default:
-      return '';
+    case 'wish': return `<button class="action-btn primary" data-action="start-reading" data-book-id="${book.id}">Start Reading</button>`;
+    case 'reading': return `<button class="action-btn primary" data-action="finish-reading" data-book-id="${book.id}">Mark Complete</button>`;
+    case 'read': return `<button class="action-btn" data-action="rate" data-book-id="${book.id}">Rate Again</button>`;
+    case 'upcoming': return `<button class="action-btn" data-action="wish" data-book-id="${book.id}">Add to Wishlist</button>`;
+    default: return '';
   }
 }
 
@@ -715,30 +593,21 @@ function updateStats(){
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth();
-  
   let monthCount = 0, yearCount = 0, totalRating = 0, ratedBooks = 0;
-  
   books.forEach(book => {
     (book.sessions || []).forEach(session => {
       if(session.finishedAt) {
         const finishDate = new Date(session.finishedAt);
         if(finishDate.getFullYear() === currentYear) {
           yearCount++;
-          if(finishDate.getMonth() === currentMonth) {
-            monthCount++;
-          }
+          if(finishDate.getMonth() === currentMonth) monthCount++;
         }
-        if(session.rating > 0) {
-          totalRating += session.rating;
-          ratedBooks++;
-        }
+        if(session.rating > 0) { totalRating += session.rating; ratedBooks++; }
       }
     });
   });
-
   const completedBooks = books.filter(b => b.status === 'read').length;
   const avgRating = ratedBooks > 0 ? (totalRating / ratedBooks) : 0;
-
   document.getElementById('total-books').textContent = books.length.toString();
   document.getElementById('books-read').textContent = completedBooks.toString();
   document.getElementById('read-month').textContent = monthCount.toString();
@@ -748,36 +617,22 @@ function updateStats(){
 
 /* ===== Filters & Search ===== */
 function populateFilters(){
-  // Genres
   const genres = [...new Set(books.map(b => b.genre).filter(Boolean))].sort();
-  const genreSelect = document.getElementById('category-filter');
-  genreSelect.innerHTML = '<option value="">All Genres</option>' + 
+  document.getElementById('category-filter').innerHTML = '<option value="">All Genres</option>' + 
     genres.map(g => `<option value="${escapeAttr(g)}">${escapeHtml(g)}</option>`).join('');
-  
-  // Tags  
   const tags = [...new Set(books.flatMap(b => b.tags || []))].sort();
-  const tagSelect = document.getElementById('tag-filter');
-  tagSelect.innerHTML = '<option value="">All Tags</option>' + 
+  document.getElementById('tag-filter').innerHTML = '<option value="">All Tags</option>' + 
     tags.map(t => `<option value="${escapeAttr(t)}">${escapeHtml(t)}</option>`).join('');
 }
-
 function bookMatchesSearch(book, query){
   if(!query) return true;
   const searchText = query.toLowerCase();
-  const searchFields = [
-    book.title,
-    book.author,
-    book.synopsis,
-    ...(book.tags || []),
-    book.series?.name
-  ].filter(Boolean).map(s => s.toLowerCase());
-  
+  const searchFields = [book.title, book.author, book.synopsis, ...(book.tags || []), book.series?.name]
+    .filter(Boolean).map(s => s.toLowerCase());
   return searchFields.some(field => field.includes(searchText));
 }
-
 let currentBooks = [];
-
-function applyFilters(shouldAutoSearch = false){
+function applyFilters(){
   const query = document.getElementById('search-input').value.trim();
   const tagFilter = document.getElementById('tag-filter').value;
   const genreFilter = document.getElementById('category-filter').value;
@@ -792,90 +647,53 @@ function applyFilters(shouldAutoSearch = false){
     return true;
   });
 
-  // Sort
   switch(sortBy){
-    case 'new':
-      filtered.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
-      break;
-    case 'rating':
-      filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-      break;
-    case 'title':
-      filtered.sort((a, b) => a.title.localeCompare(b.title));
-      break;
-    default: // smart
+    case 'new': filtered.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt)); break;
+    case 'rating': filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0)); break;
+    case 'title': filtered.sort((a, b) => a.title.localeCompare(b.title)); break;
+    default:
       filtered.sort((a, b) => {
-        const statusOrder = {reading: 0, upcoming: 1, wish: 2, read: 3};
-        const aOrder = statusOrder[a.status] ?? 4;
-        const bOrder = statusOrder[b.status] ?? 4;
-        if(aOrder !== bOrder) return aOrder - bOrder;
+        const order = {reading:0, upcoming:1, wish:2, read:3};
+        const ao = order[a.status] ?? 4, bo = order[b.status] ?? 4;
+        if(ao !== bo) return ao - bo;
         return new Date(b.addedAt) - new Date(a.addedAt);
       });
   }
 
   currentBooks = filtered;
   renderBooks();
-
-  // We don't auto-open the search modal anymore.
 }
-
 function renderBooks(){
   const container = document.getElementById('books-feed');
-  
   if(currentBooks.length === 0){
-    container.innerHTML = `
-      <div style="text-align:center;padding:60px 20px;color:var(--muted);">
-        <h3 style="font-size:1.2rem;margin-bottom:12px;">No books found</h3>
-        <p>Try adjusting your filters or search for new books to add.</p>
-      </div>
-    `;
+    container.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--muted);">
+      <h3 style="font-size:1.2rem;margin-bottom:12px;">No books found</h3>
+      <p>Try adjusting your filters or search for new books to add.</p></div>`;
     document.getElementById('result-count').textContent = '0 books found';
     return;
   }
-
-  // Group by status
   const groups = {
     reading: currentBooks.filter(b => b.status === 'reading'),
     upcoming: currentBooks.filter(b => b.status === 'upcoming'),
     wish: currentBooks.filter(b => b.status === 'wish'),
     read: currentBooks.filter(b => b.status === 'read')
   };
-
-  const groupNames = {
-    reading: 'Currently Reading',
-    upcoming: 'Coming Soon',
-    wish: 'Want to Read', 
-    read: 'Completed'
-  };
-
+  const groupNames = { reading: 'Currently Reading', upcoming: 'Coming Soon', wish: 'Want to Read', read: 'Completed' };
   let html = '';
-  Object.entries(groups).forEach(([status, books]) => {
-    if(books.length === 0) return;
-    
-    html += `
-      <div class="group-section">
-        <h2 class="group-title">
-          ${groupNames[status]}
-          <span class="group-count">${books.length}</span>
-        </h2>
-        <div class="books-grid">
-          ${books.map(renderBookCard).join('')}
-        </div>
-      </div>
-    `;
+  Object.entries(groups).forEach(([status, list]) => {
+    if(list.length === 0) return;
+    html += `<div class="group-section">
+      <h2 class="group-title">${groupNames[status]} <span class="group-count">${list.length}</span></h2>
+      <div class="books-grid">${list.map(renderBookCard).join('')}</div>
+    </div>`;
   });
-
   container.innerHTML = html;
-  document.getElementById('result-count').textContent = 
-    `${currentBooks.length} book${currentBooks.length === 1 ? '' : 's'} found`;
+  document.getElementById('result-count').textContent = `${currentBooks.length} book${currentBooks.length === 1 ? '' : 's'} found`;
 }
 
-/* ===== Google Books Search (EN-ONLY; EDIT BEFORE ADD) ===== */
-
+/* ===== Google Books Search (EN only) + LIVE TYPEAHEAD ===== */
 const GBOOKS_API = 'https://www.googleapis.com/books/v1/volumes';
-let gbResults = [];            // search results
-let gbSelected = null;         // currently loaded result for edit
-let gbTags = [];               // tags for edit panel
+let gbResults = [], gbSelected = null, gbTags = [], recoTags = [];
 
 const TAG_SUGGESTIONS = [
   'sci-fi','fantasy','romance','mystery','thriller','horror','historical-fiction',
@@ -883,7 +701,7 @@ const TAG_SUGGESTIONS = [
   'business','leadership','productivity','marketing','psychology','philosophy',
   'history','science','technology','health','fitness','cooking','travel',
   'true-crime','faith','neuroscience','time-travel','space','post-apocalyptic',
-  'page-turner','thought-provoking','emotional','inspiring','practical'
+  'page-turner','thought-provoking','emotional','inspiring','practical','short-stories','essays'
 ];
 
 function parseSeriesFromTitle(title){
@@ -894,60 +712,65 @@ function parseSeriesFromTitle(title){
     /#\s*([\d.]+)\s*\(([^()]+?)\)\s*$/i
   ];
   for(const pattern of patterns){
-    const match = title.match(pattern);
-    if(match){
-      return { 
-        name: (match[2] || match[1]).trim(), 
-        number: (match[1] || match[2]).trim() 
-      };
-    }
+    const m = title.match(pattern);
+    if(m){ return { name: (m[2] || m[1]).trim(), number: (m[1] || m[2]).trim() }; }
   }
   return null;
 }
-
 function mapGenre(categories){
   if(!categories || !categories.length) return 'other';
   const cats = categories.join(' ').toLowerCase();
   const mappings = [
-    ['mystery', 'mystery'], ['thriller', 'thriller'], ['horror', 'horror'],
-    ['romance', 'romance'], ['science fiction', 'sci-fi'], ['fantasy', 'fantasy'],
-    ['young adult', 'young adult'], ['biography', 'biography'], ['memoir', 'memoir'],
-    ['self-help', 'self-help'], ['history', 'history'], ['business', 'business'],
-    ['philosophy', 'philosophy'], ['religion', 'spirituality/religion']
+    ['mystery','mystery'],['thriller','thriller'],['horror','horror'],
+    ['romance','romance'],['science fiction','sci-fi'],['fantasy','fantasy'],
+    ['young adult','young adult'],['biography','biography'],['memoir','memoir'],
+    ['self-help','self-help'],['history','history'],['business','business'],
+    ['philosophy','philosophy'],['religion','spirituality/religion']
   ];
-  for(const [needle, genre] of mappings){
-    if(cats.includes(needle)) return genre;
-  }
+  for(const [needle, genre] of mappings){ if(cats.includes(needle)) return genre; }
   return cats.includes('fiction') ? 'fiction' : 'other';
 }
-
-function cleanTags(categories) {
+function cleanTags(categories){
   if(!categories || !categories.length) return [];
-  const stopWords = new Set([
-    'fiction','nonfiction','non-fiction','books','literature','general',
-    'juvenile','adult','ages','grade','book','novel','story','tales',
-    'the','and','or','of','in','at','by','for','with','to','from'
-  ]);
-  const allText = categories.join(' | ').toLowerCase();
+  const stop = new Set(['fiction','nonfiction','non-fiction','books','literature','general','juvenile','adult','ages','grade','book','novel','story','tales','the','and','or','of','in','at','by','for','with','to','from']);
   const extracted = new Set();
-  const themePatterns = [
-    [/urban.?fantasy/,'urban-fantasy'],[/epic.?fantasy/,'epic-fantasy'],
-    [/space.?opera/,'space-opera'],[/cyberpunk/,'cyberpunk'],
-    [/dystopian/,'dystopian'],[/post.?apocalyptic/,'post-apocalyptic'],
-    [/time.?travel/,'time-travel'],[/true.?crime/,'true-crime'],
-    [/psychology/,'psychology'],[/philosophy/,'philosophy'],
-    [/history/,'history'],[/science/,'science'],[/technology/,'technology'],
-    [/memoir/,'memoir'],[/biography/,'biography'],[/romance/,'romance'],
-    [/mystery/,'mystery'],[/thriller/,'thriller'],[/fantasy/,'fantasy'],
-    [/religion|spiritual/,'faith']
+  const big = categories.join(' | ').toLowerCase();
+  const patterns = [
+    [/urban.?fantasy/,'urban-fantasy'],[/epic.?fantasy/,'epic-fantasy'],[/space.?opera/,'space-opera'],
+    [/cyberpunk/,'cyberpunk'],[/dystopian/,'dystopian'],[/post.?apocalyptic/,'post-apocalyptic'],
+    [/time.?travel/,'time-travel'],[/true.?crime/,'true-crime'],[/psychology/,'psychology'],
+    [/philosophy/,'philosophy'],[/history/,'history'],[/science/,'science'],[/technology/,'technology'],
+    [/memoir/,'memoir'],[/biography/,'biography'],[/romance/,'romance'],[/mystery/,'mystery'],
+    [/thriller/,'thriller'],[/fantasy/,'fantasy'],[/religion|spiritual/,'faith']
   ];
-  for(const [re,tag] of themePatterns){ if(re.test(allText)) extracted.add(tag); }
+  for(const [re,tag] of patterns){ if(re.test(big)) extracted.add(tag); }
   const words = categories
     .flatMap(cat => cat.split(/[\/\-|&,>()]+/))
     .map(w => w.trim().toLowerCase())
-    .filter(w => w.length>3 && w.length<20 && !stopWords.has(w) && !/^\d+$/.test(w) && !w.includes('.'));
+    .filter(w => w.length>3 && w.length<20 && !stop.has(w) && !/^\d+$/.test(w) && !w.includes('.'));
   words.forEach(w => extracted.add(w));
   return Array.from(extracted).slice(0,8);
+}
+function recommendTagsFrom(title, synopsis, categories){
+  const s = `${title||''} ${synopsis||''}`.toLowerCase();
+  const rec = new Set(cleanTags(categories||[]));
+  const PAT = [
+    [/award[- ]winning|pulitzer|booker|hugo|nebula/,'award-winning'],
+    [/short stories|short-story|collection/,'short-stories'],
+    [/essay|essays/,'essays'],
+    [/coming[- ]of[- ]age/,'coming-of-age'],
+    [/space|cosmos|astronaut|planet/,'space'],
+    [/time[- ]travel/,'time-travel'],
+    [/detective|whodunnit|whodunit|sleuth/,'mystery'],
+    [/haunted|ghost|demon|possession/,'horror'],
+    [/dragon|magic|wizard|sorcer/,'fantasy'],
+    [/startup|founder|marketing|sales/,'business'],
+    [/habit|productivity|workflow/,'productivity'],
+    [/catholic|christian|saint|prayer/,'faith'],
+    [/neuro|brain|cognitive/,'neuroscience']
+  ];
+  PAT.forEach(([re,tag])=>{ if(re.test(s)) rec.add(tag); });
+  return Array.from(rec).slice(0,12);
 }
 
 async function searchGoogleBooksEnglish(query, author, maxResults=15){
@@ -958,7 +781,7 @@ async function searchGoogleBooksEnglish(query, author, maxResults=15){
   const data = await resp.json();
   const items = (data.items || []).filter(it => {
     const lang = (it.volumeInfo && it.volumeInfo.language || 'en').toLowerCase();
-    return lang.startsWith('en'); // double-enforce English
+    return lang.startsWith('en'); // enforce English
   });
   return items.map(item => {
     const v = item.volumeInfo || {};
@@ -977,7 +800,6 @@ async function searchGoogleBooksEnglish(query, author, maxResults=15){
     };
   });
 }
-
 function renderSearchResults(){
   const container = document.getElementById('search-results');
   const counter = document.getElementById('ext-result-count');
@@ -995,57 +817,53 @@ function renderSearchResults(){
         <div class="result-meta">${r.categories && r.categories[0] ? escapeHtml(r.categories[0]) : '—'} ${r.publishedDate ? ' • '+escapeHtml(r.publishedDate) : ''}</div>
       </div>
       <button class="action-btn pick-btn" data-pick="${idx}" type="button">Pick</button>
-    </div>
-  `).join('');
+    </div>`).join('');
   counter.textContent = `${gbResults.length} result${gbResults.length===1?'':'s'}`;
 }
-
 function openSearchModal(prefill=''){
   document.getElementById('ext-search-input').value = prefill || '';
   document.getElementById('ext-search-author').value = '';
   document.getElementById('search-results').innerHTML = '';
   document.getElementById('ext-result-count').textContent = '0 results';
-  gbResults = [];
-  gbSelected = null;
-  gbTags = [];
-  renderEditTags();
+  gbResults = []; gbSelected = null; gbTags = []; recoTags = [];
+  renderEditTags(); renderRecommendedTags();
   document.getElementById('edit-panel').style.display = 'none';
   document.getElementById('edit-empty').style.display = 'block';
   document.getElementById('search-modal').classList.add('show');
 }
-
-function closeSearchModal(){
-  document.getElementById('search-modal').classList.remove('show');
-}
-
+function closeSearchModal(){ document.getElementById('search-modal').classList.remove('show'); }
 async function performSearch(){
   const title = document.getElementById('ext-search-input').value.trim();
   const author = document.getElementById('ext-search-author').value.trim();
-  if(!title){ return; }
   const list = document.getElementById('search-results');
+  if(title.length < 2){ list.innerHTML = ''; document.getElementById('ext-result-count').textContent='0 results'; gbResults=[]; return; }
   list.innerHTML = '<div class="result-item"><div class="result-info"><div class="result-title">Searching…</div></div></div>';
-  try{
-    gbResults = await searchGoogleBooksEnglish(title, author, 18);
-    renderSearchResults();
-  }catch(e){
-    list.innerHTML = '<div class="result-item"><div class="result-info"><div class="result-title" style="color:#b74a4a">Search failed. Please try again.</div></div></div>';
-    gbResults = [];
-    document.getElementById('ext-result-count').textContent = '0 results';
-  }
+  try{ gbResults = await searchGoogleBooksEnglish(title, author, 18); renderSearchResults(); }
+  catch(e){ list.innerHTML = '<div class="result-item"><div class="result-info"><div class="result-title" style="color:#b74a4a">Search failed. Please try again.</div></div></div>'; gbResults = []; document.getElementById('ext-result-count').textContent = '0 results'; }
 }
 
-/* ===== Edit Panel ===== */
+/* ===== Tags (Your + Recommended) ===== */
 function renderEditTags(){
   const wrap = document.getElementById('edit-tags');
   wrap.innerHTML = gbTags.map(t => `<span class="tag-chip" data-tag="${escapeAttr(t)}">${escapeHtml(t)} ×</span>`).join('');
 }
-
+function renderRecommendedTags(){
+  const wrap = document.getElementById('edit-tags-reco');
+  if(!recoTags.length){ wrap.innerHTML = `<span class="chip">No suggestions yet</span>`; return; }
+  wrap.innerHTML = recoTags.map(t => `<span class="tag-chip" data-reco="${escapeAttr(t)}">+ ${escapeHtml(t)}</span>`).join('');
+}
 function seedTagsFromResult(res){
   const seed = cleanTags(res.categories || []);
-  gbTags = Array.from(new Set([...(gbTags||[]), ...seed])).slice(0,8);
+  gbTags = Array.from(new Set([...(gbTags||[]), ...seed])).slice(0,12);
   renderEditTags();
 }
-
+function recomputeRecommended(){
+  const title = document.getElementById('edit-title').value || (gbSelected && gbSelected.title) || '';
+  const synopsis = document.getElementById('edit-synopsis').value || (gbSelected && gbSelected.description) || '';
+  const cats = (gbSelected && gbSelected.categories) || [];
+  recoTags = recommendTagsFrom(title, synopsis, cats);
+  renderRecommendedTags();
+}
 function loadResultIntoEdit(idx){
   const r = gbResults[idx]; if(!r) return;
   gbSelected = r;
@@ -1055,14 +873,13 @@ function loadResultIntoEdit(idx){
   document.getElementById('edit-synopsis').value = r.description || '';
   document.getElementById('edit-genre').value = mapGenre(r.categories || []);
   seedTagsFromResult(r);
+  recomputeRecommended();
   document.getElementById('edit-empty').style.display = 'none';
   document.getElementById('edit-panel').style.display = 'block';
 }
-
 function resetEdit(){
-  gbSelected = null;
-  gbTags = [];
-  renderEditTags();
+  gbSelected=null; gbTags=[]; recoTags=[];
+  renderEditTags(); renderRecommendedTags();
   document.getElementById('edit-title').value = '';
   document.getElementById('edit-author').value = '';
   document.getElementById('edit-image').value = '';
@@ -1072,7 +889,6 @@ function resetEdit(){
   document.getElementById('edit-empty').style.display = 'block';
   document.getElementById('edit-panel').style.display = 'none';
 }
-
 function confirmAddFromEdit(){
   const title = document.getElementById('edit-title').value.trim();
   const author = document.getElementById('edit-author').value.trim();
@@ -1081,6 +897,8 @@ function confirmAddFromEdit(){
   const genre = (document.getElementById('edit-genre').value || 'other').trim().toLowerCase();
   const dest = document.getElementById('edit-dest').value || 'wish';
   if(!title || !author){ showToast('Title and author are required.', true); return; }
+  // If user provided no tags, fall back to recommended
+  const chosenTags = gbTags.length ? gbTags.slice(0,12) : recoTags.slice(0,8);
 
   let releaseDate = '';
   let status = dest;
@@ -1091,7 +909,7 @@ function confirmAddFromEdit(){
 
   const book = newBook({
     title, author, image, synopsis,
-    genre, tags: gbTags.slice(0,8),
+    genre, tags: chosenTags,
     status, releaseDate,
     series: gbSelected && gbSelected.series ? gbSelected.series : null
   });
@@ -1100,36 +918,23 @@ function confirmAddFromEdit(){
 
   // Watch series?
   const watch = document.getElementById('ext-watch').checked;
-  if(watch && book.series?.name){
-    sitePrefs.watchSeries[book.series.name] = book.author;
-  }
+  if(watch && book.series?.name){ sitePrefs.watchSeries[book.series.name] = book.author; }
 
-  saveAll();
-  populateFilters();
-  applyFilters();
-  updateStats();
-  showToast(`Added "${book.title}"`);
-
-  // reset selection (stay in modal for multiple adds)
+  saveAll(); populateFilters(); applyFilters(); updateStats(); showToast(`Added "${book.title}"`);
   resetEdit();
 }
 
-/* ===== Release Checking (unchanged) ===== */
+/* ===== Release Checking ===== */
 async function checkReleases(){
   const watchedSeries = Object.keys(sitePrefs.watchSeries || {});
-  if(watchedSeries.length === 0){
-    showToast('No series being watched');
-    return;
-  }
-  let foundReleases = 0;
+  if(watchedSeries.length === 0){ showToast('No series being watched'); return; }
+  let found = 0;
   for(const seriesName of watchedSeries){
-    try {
+    try{
       const author = sitePrefs.watchSeries[seriesName] || '';
       const query = `intitle:"${seriesName}"${author ? ` inauthor:"${author}"` : ''}`;
-      // ensure English on release checks too
       const url = `${GBOOKS_API}?q=${encodeURIComponent(query)}&maxResults=20&printType=books&langRestrict=en`;
-      const r = await fetch(url);
-      const data = r.ok ? await r.json() : {items:[]};
+      const r = await fetch(url); const data = r.ok ? await r.json() : {items:[]};
       const now = new Date();
       const upcoming = (data.items || [])
         .filter(it => String((it.volumeInfo && it.volumeInfo.language)||'en').toLowerCase().startsWith('en'))
@@ -1140,109 +945,54 @@ async function checkReleases(){
         })
         .filter(x => x.isUpcoming)
         .sort((a,b) => a.releaseDate - b.releaseDate);
-      if(upcoming.length > 0){
-        const next = upcoming[0];
-        showToast(`${seriesName}: "${next.title}" releasing ${formatDate(next.releaseDate)}`);
-        foundReleases++;
-      }
-    } catch(error) {
-      console.warn(`Failed to check releases for ${seriesName}:`, error);
-    }
+      if(upcoming.length){ const next = upcoming[0]; showToast(`${seriesName}: "${next.title}" releasing ${formatDate(next.releaseDate)}`); found++; }
+    }catch(e){ console.warn('Release check failed', e); }
   }
-  if(foundReleases === 0){
-    showToast('No upcoming releases found');
-  }
+  if(!found) showToast('No upcoming releases found');
 }
 
-/* ===== Event Handlers ===== */
+/* ===== Actions/Rating/Menu ===== */
 function handleBookAction(action, bookId){
   const book = books.find(b => b.id === parseInt(bookId));
   if(!book) return;
   switch(action){
-    case 'wish':
-      setWish(book);
-      saveAll(); applyFilters(); updateStats(); showToast('Moved to wishlist');
-      break;
-    case 'start-reading':
-      startReading(book);
-      saveAll(); applyFilters(); updateStats(); showToast('Started reading!');
-      break;
-    case 'finish-reading':
-      openRatingModal(book);
-      break;
-    case 'rate':
-      openRatingModal(book);
-      break;
-    case 'edit':
-      editBook(book);
-      break;
+    case 'wish': setWish(book); saveAll(); applyFilters(); updateStats(); showToast('Moved to wishlist'); break;
+    case 'start-reading': startReading(book); saveAll(); applyFilters(); updateStats(); showToast('Started reading!'); break;
+    case 'finish-reading': openRatingModal(book); break;
+    case 'rate': openRatingModal(book); break;
+    case 'edit': editBook(book); break;
     case 'delete':
-      if(confirm(`Delete "${book.title}"?`)){
-        books = books.filter(b => b.id !== book.id);
-        saveAll(); applyFilters(); updateStats(); showToast('Book deleted');
-      }
+      if(confirm(`Delete "${book.title}"?`)){ books = books.filter(b => b.id !== book.id); saveAll(); applyFilters(); updateStats(); showToast('Book deleted'); }
       break;
-    case 'find-similar':
-      findSimilarBooks(book);
-      break;
-    case 'share':
-      shareBook(book);
-      break;
-    case 'toggle-synopsis':
-      toggleSynopsis(bookId);
-      break;
-    case 'toggle-menu':
-      toggleDropdownMenu(bookId);
-      break;
+    case 'find-similar': findSimilarBooks(book); break;
+    case 'share': shareBook(book); break;
+    case 'toggle-synopsis': toggleSynopsis(bookId); break;
+    case 'toggle-menu': toggleDropdownMenu(bookId); break;
   }
 }
-
 function editBook(book){
-  const newTitle = prompt('Edit title:', book.title);
-  if(newTitle === null) return;
-  const newAuthor = prompt('Edit author:', book.author);
-  if(newAuthor === null) return;
+  const newTitle = prompt('Edit title:', book.title); if(newTitle === null) return;
+  const newAuthor = prompt('Edit author:', book.author); if(newAuthor === null) return;
   book.title = newTitle.trim() || book.title;
   book.author = newAuthor.trim() || book.author;
   saveAll(); applyFilters(); showToast('Book updated');
 }
-
 function shareBook(book){
   const goodreadsUrl = `https://www.goodreads.com/search?q=${encodeURIComponent(book.title + ' ' + book.author)}`;
   const rating = book.rating > 0 ? ` • ${book.rating}★` : '';
   const text = `"${book.title}" by ${book.author}${rating} - Check it out: ${goodreadsUrl}`;
   if(navigator.share){
-    navigator.share({ title: 'Book Recommendation', text })
-      .catch(() => {
-        if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          const smsUrl = isiOS() ? `sms:&body=${encodeURIComponent(text)}` : `sms:?body=${encodeURIComponent(text)}`;
-          window.open(smsUrl);
-        } else {
-          copyToClipboard(text);
-          showToast('Book link copied to clipboard!');
-        }
-      });
+    navigator.share({ title: 'Book Recommendation', text }).catch(() => {
+      if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) window.open(isiOS()?`sms:&body=${encodeURIComponent(text)}`:`sms:?body=${encodeURIComponent(text)}`);
+      else { copyToClipboard(text); showToast('Book link copied to clipboard!'); }
+    });
   } else {
-    if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-      const smsUrl = isiOS() ? `sms:&body=${encodeURIComponent(text)}` : `sms:?body=${encodeURIComponent(text)}`;
-      window.open(smsUrl);
-    } else {
-      copyToClipboard(text);
-      showToast('Book recommendation copied to clipboard!');
-    }
+    if(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) window.open(isiOS()?`sms:&body=${encodeURIComponent(text)}`:`sms:?body=${encodeURIComponent(text)}`);
+    else { copyToClipboard(text); showToast('Book recommendation copied to clipboard!'); }
   }
 }
-
-function copyToClipboard(text){
-  navigator.clipboard.writeText(text).then(() => {
-    showToast('Copied to clipboard!');
-  }).catch(() => {
-    showToast('Could not copy to clipboard', true);
-  });
-}
-
-function findSimilarBooks(book) {
-  // Search by genre/tags only (no title/author)
+function copyToClipboard(text){ navigator.clipboard.writeText(text).then(()=>showToast('Copied to clipboard!')).catch(()=>showToast('Could not copy to clipboard',true)); }
+function findSimilarBooks(book){
   let terms = [];
   if(book.tags && book.tags.length){
     const good = book.tags.filter(t => t.length>3 && !['other','general','book','books','fiction','nonfiction'].includes(t));
@@ -1253,43 +1003,27 @@ function findSimilarBooks(book) {
     const broad = { 'mystery':'mystery crime detective','thriller':'thriller suspense','romance':'romance love story','fantasy':'fantasy magic adventure','sci-fi':'science fiction space','horror':'horror supernatural scary','biography':'biography','memoir':'memoir','history':'history','business':'business management','self-help':'self help','philosophy':'philosophy','spirituality/religion':'religion spiritual','health & fitness':'health fitness','cooking':'cooking recipe','travel':'travel' };
     terms.push(broad[book.genre]||'popular books');
   }
-  const q = terms.join(' ');
-  openSearchModal(q);
+  openSearchModal(terms.join(' '));
   showToast(`Finding ${book.genre||''} picks…`);
 }
-
 function toggleSynopsis(bookId){
   const synopsis = document.querySelector(`[data-book-id="${bookId}"] .book-synopsis`);
   if(!synopsis) return;
   const text = synopsis.querySelector('.synopsis-text');
   const button = synopsis.querySelector('.synopsis-toggle');
-  if(!text || !button) return;
   const book = books.find(b => b.id === parseInt(bookId));
-  if(!book || !book.synopsis) return;
+  if(!book || !text || !button) return;
   const isExpanded = synopsis.classList.contains('expanded');
-  if(isExpanded){
-    synopsis.classList.remove('expanded');
-    text.textContent = truncate(book.synopsis, 150);
-    button.textContent = 'Read more';
-  } else {
-    synopsis.classList.add('expanded');
-    text.textContent = book.synopsis;
-    button.textContent = 'Show less';
-  }
+  if(isExpanded){ synopsis.classList.remove('expanded'); text.textContent = truncate(book.synopsis, 150); button.textContent = 'Read more'; }
+  else { synopsis.classList.add('expanded'); text.textContent = book.synopsis; button.textContent = 'Show less'; }
 }
-
 function toggleDropdownMenu(bookId){
-  document.querySelectorAll('.dropdown').forEach(menu => {
-    if(menu.dataset.bookId !== bookId){ menu.classList.remove('show','left'); }
-  });
-  const menu = document.querySelector(`.dropdown[data-book-id="${bookId}"]`);
-  if(!menu) return;
+  document.querySelectorAll('.dropdown').forEach(menu => { if(menu.dataset.bookId !== bookId) menu.classList.remove('show','left'); });
+  const menu = document.querySelector(`.dropdown[data-book-id="${bookId}"]`); if(!menu) return;
   const isShowing = menu.classList.contains('show');
   if(isShowing) { menu.classList.remove('show','left'); }
   else {
-    menu.classList.remove('left');
-    menu.classList.add('show');
-    menu.offsetWidth;
+    menu.classList.remove('left'); menu.classList.add('show'); menu.offsetWidth;
     requestAnimationFrame(() => {
       const rect = menu.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
@@ -1300,33 +1034,18 @@ function toggleDropdownMenu(bookId){
 }
 
 /* ===== Rating Modal ===== */
-let currentRatingBook = null;
-let currentRating = 0;
-
+let currentRatingBook = null, currentRating = 0;
 function openRatingModal(book){
   currentRatingBook = book;
   currentRating = book.rating || 0;
   document.getElementById('finish-title').textContent = `${book.title} by ${book.author}`;
-  const container = document.getElementById('star-rating');
-  container.innerHTML = '';
-  for(let i = 1; i <= 5; i++){
-    const star = document.createElement('button');
-    star.className = 'star-btn';
-    star.textContent = '★';
-    star.onclick = () => setRating(i);
-    container.appendChild(star);
-  }
-  updateStarDisplay();
-  document.getElementById('finish-modal').classList.add('show');
+  const container = document.getElementById('star-rating'); container.innerHTML = '';
+  for(let i=1;i<=5;i++){ const star=document.createElement('button'); star.className='star-btn'; star.textContent='★'; star.onclick=()=>setRating(i); container.appendChild(star); }
+  updateStarDisplay(); document.getElementById('finish-modal').classList.add('show');
 }
 function setRating(r){ currentRating=r; updateStarDisplay(); }
-function updateStarDisplay(){
-  document.querySelectorAll('.star-btn').forEach((s, i) => s.classList.toggle('active', (i+1)<=currentRating));
-}
-function closeRatingModal(){
-  document.getElementById('finish-modal').classList.remove('show');
-  currentRatingBook = null; currentRating = 0;
-}
+function updateStarDisplay(){ document.querySelectorAll('.star-btn').forEach((s,i)=>s.classList.toggle('active',(i+1)<=currentRating)); }
+function closeRatingModal(){ document.getElementById('finish-modal').classList.remove('show'); currentRatingBook=null; currentRating=0; }
 function saveRating(){
   if(!currentRatingBook) return;
   const book = books.find(b => b.id === currentRatingBook.id); if(!book) return;
@@ -1335,43 +1054,35 @@ function saveRating(){
     if(book.status !== 'reading') startReading(book);
     finishReading(book, currentRating);
   } else {
-    const lastSession = book.sessions[book.sessions.length - 1];
-    if(lastSession) lastSession.rating = currentRating;
+    const last = book.sessions[book.sessions.length - 1]; if(last) last.rating = currentRating;
   }
   saveAll(); applyFilters(); updateStats(); closeRatingModal(); showToast('Rating saved!');
 }
 
-/* ===== Export/Import/Goals unchanged (omitted for brevity in comments; still present) ===== */
+/* ===== Export/Import/Goals ===== */
 function exportCSV(){
-  const headers = ['Title', 'Author', 'Genre', 'Rating', 'Status', 'Tags', 'Added Date'];
-  const rows = books.map(book => [
-    book.title, book.author, book.genre, book.rating || 0, book.status,
-    (book.tags || []).join('; '), formatDate(book.addedAt)
-  ]);
+  const headers = ['Title','Author','Genre','Rating','Status','Tags','Added Date'];
+  const rows = books.map(book => [book.title, book.author, book.genre, book.rating || 0, book.status, (book.tags || []).join('; '), formatDate(book.addedAt)]);
   const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
   downloadFile('plotline-books.csv', csv, 'text/csv');
 }
-function exportJSON(){
-  const data = JSON.stringify({books, sitePrefs}, null, 2);
-  downloadFile('plotline-export.json', data, 'application/json');
-}
+function exportJSON(){ const data = JSON.stringify({books, sitePrefs}, null, 2); downloadFile('plotline-export.json', data, 'application/json'); }
 function downloadFile(filename, content, type){
   const blob = new Blob([content], {type});
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url; link.download = filename; document.body.appendChild(link); link.click();
+  const link = document.createElement('a'); link.href = url; link.download = filename; document.body.appendChild(link); link.click();
   document.body.removeChild(link); URL.revokeObjectURL(url);
 }
 function importJSON(file){
   const reader = new FileReader();
   reader.onload = function(e){
-    try {
+    try{
       const data = JSON.parse(e.target.result);
       if(data.books) books = data.books;
       if(data.sitePrefs) sitePrefs = Object.assign({watchSeries: {}}, data.sitePrefs);
       saveAll(); populateFilters(); applyFilters(); updateStats(); loadGoalsUI();
       showToast('Import successful!');
-    } catch(error) { showToast('Invalid JSON file', true); }
+    } catch(_e){ showToast('Invalid JSON file', true); }
   };
   reader.readAsText(file);
 }
@@ -1388,25 +1099,17 @@ function updateWatchedSeriesList(){
   const container = document.getElementById('watched-series-list');
   const watchedSeries = sitePrefs.watchSeries || {};
   const seriesNames = Object.keys(watchedSeries);
-  if(seriesNames.length === 0){
-    container.innerHTML = '<div class="chip">No series being watched</div>';
-    return;
-  }
+  if(seriesNames.length === 0){ container.innerHTML = '<div class="chip">No series being watched</div>'; return; }
   container.innerHTML = seriesNames.map(name => {
     const author = watchedSeries[name] || '';
-    return `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px;background:var(--paper-2);border-radius:8px;border:1px solid var(--line);">
-        <strong style="flex:1;">${escapeHtml(name)}</strong>
-        ${author ? `<span style="color:var(--muted);font-size:13px;">by ${escapeHtml(author)}</span>` : ''}
-        <button class="action-btn" onclick="removeWatchedSeries('${escapeAttr(name)}')" style="padding:4px 8px;font-size:12px;">Remove</button>
-      </div>
-    `;
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:8px;background:var(--paper-2);border-radius:8px;border:1px solid var(--line);">
+      <strong style="flex:1;">${escapeHtml(name)}</strong>
+      ${author ? `<span style="color:var(--muted);font-size:13px;">by ${escapeHtml(author)}</span>` : ''}
+      <button class="action-btn" onclick="removeWatchedSeries('${escapeAttr(name)}')" style="padding:4px 8px;font-size:12px;">Remove</button>
+    </div>`;
   }).join('');
 }
-function removeWatchedSeries(seriesName){
-  delete sitePrefs.watchSeries[seriesName];
-  saveAll(); updateWatchedSeriesList(); showToast(`Stopped watching "${seriesName}"`);
-}
+function removeWatchedSeries(seriesName){ delete sitePrefs.watchSeries[seriesName]; saveAll(); updateWatchedSeriesList(); showToast(`Stopped watching "${seriesName}"`); }
 function saveGoals(){
   const goals = sitePrefs.goals || {};
   goals.year = parseInt(document.getElementById('goal-year').value) || new Date().getFullYear();
@@ -1420,75 +1123,84 @@ function saveGoals(){
 
 /* ===== Initialization ===== */
 function initializeApp(){
-  // Create manifest
+  // Manifest
   try {
-    const manifest = {
-      name: 'PlotLine', short_name: 'PlotLine', start_url: './', display: 'standalone',
-      background_color: '#f4f1ea', theme_color: '#2f4a3e',
-      icons: [{ src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAAAAABQFZ1hAAAAC0lEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAB4p1nNAAE=', sizes: '192x192', type: 'image/png' }]
-    };
+    const manifest = { name:'PlotLine', short_name:'PlotLine', start_url:'./', display:'standalone',
+      background_color:'#f4f1ea', theme_color:'#2f4a3e',
+      icons:[{ src:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAAAAABQFZ1hAAAAC0lEQVR42u3BAQ0AAADCoPdPbQ43oAAAAAB4p1nNAAE=', sizes:'192x192', type:'image/png'}] };
     const blob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
     const url = URL.createObjectURL(blob);
     const link = document.getElementById('app-manifest'); if(link) link.href = url;
-  } catch(e) { console.warn('Failed to create manifest:', e); }
+  } catch(e) {}
 
-  loadAll().then(() => {
-    populateFilters(); applyFilters(); updateStats(); loadGoalsUI();
-  });
+  loadAll().then(() => { populateFilters(); applyFilters(); updateStats(); loadGoalsUI(); });
 
   // Navigation
   document.getElementById('feed-btn').addEventListener('click', () => { openSection('feed'); applyFilters(); });
   document.getElementById('prefs-btn').addEventListener('click', () => { openSection('prefs'); });
 
-  // Search and filters
-  document.getElementById('search-input').addEventListener('input', () => applyFilters(true));
-  document.getElementById('tag-filter').addEventListener('change', () => applyFilters());
-  document.getElementById('category-filter').addEventListener('change', () => applyFilters());
-  document.getElementById('min-rating').addEventListener('change', () => applyFilters());
-  document.getElementById('sort-by').addEventListener('change', () => applyFilters());
+  // Filters
+  const debouncedFilter = debounce(applyFilters, 120);
+  document.getElementById('search-input').addEventListener('input', debouncedFilter);
+  document.getElementById('tag-filter').addEventListener('change', applyFilters);
+  document.getElementById('category-filter').addEventListener('change', applyFilters);
+  document.getElementById('min-rating').addEventListener('change', applyFilters);
+  document.getElementById('sort-by').addEventListener('change', applyFilters);
   document.getElementById('collapse-synopsis').addEventListener('change', renderBooks);
 
-  // Buttons
+  // Top buttons
   document.getElementById('add-book-btn').addEventListener('click', () => openSearchModal());
   document.getElementById('check-releases-btn').addEventListener('click', checkReleases);
 
-  // Search modal wiring
+  // Search modal
   document.getElementById('ext-search-btn').addEventListener('click', performSearch);
   document.getElementById('ext-close').addEventListener('click', closeSearchModal);
 
+  // LIVE typeahead on external search (debounced)
+  const live = debounce(performSearch, 320);
+  document.getElementById('ext-search-input').addEventListener('input', live);
+  document.getElementById('ext-search-author').addEventListener('input', live);
+
   // Pick result (delegate)
   document.getElementById('search-results').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-pick]');
-    if(!btn) return;
-    const idx = parseInt(btn.getAttribute('data-pick'),10);
-    loadResultIntoEdit(idx);
+    const btn = e.target.closest('[data-pick]'); if(!btn) return;
+    const idx = parseInt(btn.getAttribute('data-pick'),10); loadResultIntoEdit(idx);
   });
 
-  // Edit panel actions
+  // Edit panel
   document.getElementById('edit-confirm').addEventListener('click', confirmAddFromEdit);
   document.getElementById('edit-reset').addEventListener('click', resetEdit);
+  // Recompute recommended tags as you type
+  const recompute = debounce(recomputeRecommended, 250);
+  document.getElementById('edit-title').addEventListener('input', recompute);
+  document.getElementById('edit-synopsis').addEventListener('input', recompute);
 
-  // Tag entry
+  // Recommended tag clicks
+  document.getElementById('edit-tags-reco').addEventListener('click', (e)=>{
+    const chip = e.target.closest('[data-reco]'); if(!chip) return;
+    const t = chip.getAttribute('data-reco');
+    if(!gbTags.includes(t)){ gbTags.push(t); gbTags = gbTags.slice(0,12); renderEditTags(); }
+  });
+
+  // Your tag entry + suggestions
   const tagInput = document.getElementById('edit-tag-input');
   const sugBox = document.getElementById('edit-tag-sugs');
-  function addTag(t){
-    t = (t||'').trim().toLowerCase(); if(!t) return;
-    if(!gbTags.includes(t)){ gbTags.push(t); gbTags = gbTags.slice(0, 12); renderEditTags(); }
-  }
+  function addTag(t){ t=(t||'').trim().toLowerCase(); if(!t) return; if(!gbTags.includes(t)){ gbTags.push(t); gbTags = gbTags.slice(0,12); renderEditTags(); } }
   tagInput.addEventListener('keydown', (e) => {
     const key = e.key || '';
-    if(key==='Enter' || key==='Tab' || key===',' ){
-      e.preventDefault();
-      addTag(tagInput.value); tagInput.value=''; sugBox.style.display='none';
-    }
+    if(key==='Enter' || key==='Tab' || key===',' ){ e.preventDefault(); addTag(tagInput.value); tagInput.value=''; sugBox.style.display='none'; }
   });
   tagInput.addEventListener('input', (e) => {
     const q=(e.target.value||'').trim().toLowerCase();
-    if(!q){ sugBox.style.display='none'; return; }
-    const items = TAG_SUGGESTIONS.filter(t => t.indexOf(q)>-1 && !gbTags.includes(t)).slice(0,8);
+    const base = [...new Set([...TAG_SUGGESTIONS, ...recoTags])];
+    if(!q){ // show a few helpful ones when empty
+      const initial = base.filter(t=>!gbTags.includes(t)).slice(0,8);
+      if(initial.length){ sugBox.innerHTML = initial.map(t => `<div class="tag-sug" data-tag="${escapeAttr(t)}">${escapeHtml(t)}</div>`).join(''); sugBox.style.display='block'; } 
+      else sugBox.style.display='none';
+      return;
+    }
+    const items = base.filter(t => t.indexOf(q)>-1 && !gbTags.includes(t)).slice(0,8);
     sugBox.innerHTML = items.map(t => `<div class="tag-sug" data-tag="${escapeAttr(t)}">${escapeHtml(t)}</div>`).join('');
-    const rect = tagInput.getBoundingClientRect();
-    sugBox.style.minWidth = rect.width+'px';
     sugBox.style.display = items.length ? 'block' : 'none';
   });
   sugBox.addEventListener('click', (e) => {
@@ -1497,8 +1209,7 @@ function initializeApp(){
   });
   document.getElementById('edit-tags').addEventListener('click', (e) => {
     const chip = e.target.closest('.tag-chip'); if(!chip) return;
-    const t = chip.getAttribute('data-tag');
-    gbTags = gbTags.filter(x => x!==t); renderEditTags();
+    const t = chip.getAttribute('data-tag'); gbTags = gbTags.filter(x => x!==t); renderEditTags();
   });
 
   // Goals & Export/Import & Cloud
@@ -1506,9 +1217,7 @@ function initializeApp(){
   document.getElementById('export-csv-btn').addEventListener('click', exportCSV);
   document.getElementById('export-json-btn').addEventListener('click', exportJSON);
   document.getElementById('import-json').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if(file) importJSON(file);
-    e.target.value = '';
+    const file = e.target.files[0]; if(file) importJSON(file); e.target.value = '';
   });
   document.getElementById('cloud-save').addEventListener('click', () => {
     const apiKey = document.getElementById('cloud-api').value.trim();
@@ -1525,15 +1234,10 @@ function initializeApp(){
   document.addEventListener('click', (e) => {
     const actionBtn = e.target.closest('[data-action]');
     if(actionBtn){
-      const action = actionBtn.dataset.action;
-      const bookId = actionBtn.dataset.bookId;
-      if(action && bookId){
-        e.preventDefault(); e.stopPropagation(); handleBookAction(action, bookId); return;
-      }
+      const action = actionBtn.dataset.action, bookId = actionBtn.dataset.bookId;
+      if(action && bookId){ e.preventDefault(); e.stopPropagation(); handleBookAction(action, bookId); return; }
     }
-    if(!e.target.closest('.more-menu')){
-      document.querySelectorAll('.dropdown.show').forEach(menu => menu.classList.remove('show','left'));
-    }
+    if(!e.target.closest('.more-menu')) document.querySelectorAll('.dropdown.show').forEach(menu => menu.classList.remove('show','left'));
     if(e.target.classList.contains('modal')){
       if(e.target.id === 'finish-modal') closeRatingModal();
       if(e.target.id === 'search-modal') closeSearchModal();
@@ -1543,34 +1247,23 @@ function initializeApp(){
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     if(e.key === 'Escape'){
-      document.querySelectorAll('.modal.show').forEach(modal => {
-        if(modal.id === 'finish-modal') closeRatingModal();
-        if(modal.id === 'search-modal') closeSearchModal();
-      });
+      document.querySelectorAll('.modal.show').forEach(modal => { if(modal.id === 'finish-modal') closeRatingModal(); if(modal.id === 'search-modal') closeSearchModal(); });
       document.querySelectorAll('.dropdown.show').forEach(menu => menu.classList.remove('show'));
     }
-    if((e.ctrlKey || e.metaKey) && e.key === 'k'){
-      e.preventDefault(); document.getElementById('search-input').focus();
-    }
+    if((e.ctrlKey || e.metaKey) && e.key === 'k'){ e.preventDefault(); document.getElementById('search-input').focus(); }
   });
 }
-
 function openSection(sectionId){
   document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
   document.getElementById(sectionId).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
   document.getElementById(`${sectionId}-btn`).classList.add('active');
 }
-
-// Global helpers
 window.removeWatchedSeries = removeWatchedSeries;
 
-// Initialize
-if(document.readyState === 'loading'){
-  document.addEventListener('DOMContentLoaded', initializeApp);
-} else {
-  initializeApp();
-}
+/* Boot */
+if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', initializeApp); }
+else { initializeApp(); }
 </script>
 </body>
 </html>
