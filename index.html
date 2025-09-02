@@ -1201,63 +1201,32 @@ function addSingleResult(index){
   addSelectedBooks();
 }
 
-/* ===== Add Book Modal Functions ===== */
-function openAddBookModal(){
-  const modal = document.getElementById('add-book-modal');
-  if(!modal) {
-    console.error('Add book modal not found');
-    return;
-  }
-  modal.classList.add('show');
-  document.getElementById('add-search-input').value = '';
-  const results = document.getElementById('add-search-results');
-  if(results) results.style.display = 'none';
-  clearManualForm();
+/* ===== Simple Modal Functions ===== */
+function openSearchModal(query = ''){
+  document.getElementById('ext-search-input').value = query;
+  document.getElementById('ext-search-author').value = '';
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-modal').classList.add('show');
+  if(query) performSearch();
 }
 
-function closeAddBookModal(){
-  document.getElementById('add-book-modal').classList.remove('show');
+function closeSearchModal(){
+  document.getElementById('search-modal').classList.remove('show');
 }
 
-function clearManualForm(){
-  document.getElementById('manual-title').value = '';
-  document.getElementById('manual-author').value = '';
-  document.getElementById('manual-genre').value = 'fiction';
-  document.getElementById('manual-status').value = 'wish';
-  document.getElementById('manual-tags').value = '';
-  document.getElementById('manual-series').value = '';
-  document.getElementById('manual-series-number').value = '';
-  document.getElementById('manual-synopsis').value = '';
-}
-
-async function performAddSearch(){
-  const query = document.getElementById('add-search-input').value.trim();
-  const searchType = document.getElementById('add-search-type').value;
+async function performSearch(){
+  const title = document.getElementById('ext-search-input').value.trim();
+  const author = document.getElementById('ext-search-author').value.trim();
   
-  if(!query) return;
+  if(!title) return;
   
-  let searchQuery = '';
-  switch(searchType) {
-    case 'title':
-      searchQuery = `intitle:"${query}"`;
-      break;
-    case 'author':
-      searchQuery = `inauthor:"${query}"`;
-      break;
-    case 'isbn':
-      searchQuery = `isbn:${query}`;
-      break;
-    default:
-      searchQuery = query;
-  }
+  const query = author ? `${title} inauthor:${author}` : title;
   
   try {
-    const resultsDiv = document.getElementById('add-search-results');
-    resultsDiv.style.display = 'block';
-    resultsDiv.innerHTML = '<div class="loading"></div>';
+    document.getElementById('search-results').innerHTML = '<div class="loading"></div>';
     
-    const data = await searchGoogleBooks(searchQuery, 15);
-    const results = (data.items || []).slice(0, 10).map(item => {
+    const data = await searchGoogleBooks(query, 10);
+    const results = (data.items || []).slice(0, 8).map(item => {
       const info = item.volumeInfo || {};
       return {
         id: item.id,
@@ -1265,102 +1234,51 @@ async function performAddSearch(){
         authors: Array.isArray(info.authors) ? info.authors.join(', ') : (info.authors || ''),
         description: info.description || '',
         image: info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || '',
-        categories: [...(info.categories || []), ...(info.subjects || [])],
-        publishedDate: info.publishedDate || '',
-        series: parseSeriesFromTitle(info.title)
+        categories: [...(info.categories || []), ...(info.subjects || [])]
       };
     });
     
-    renderAddSearchResults(results);
+    renderSimpleResults(results);
   } catch(error) {
-    document.getElementById('add-search-results').innerHTML = 
+    document.getElementById('search-results').innerHTML = 
       '<div style="color:var(--muted);padding:20px;text-align:center;">Search failed. Please try again.</div>';
   }
 }
 
-function renderAddSearchResults(results){
-  const container = document.getElementById('add-search-results');
+function renderSimpleResults(results){
+  const container = document.getElementById('search-results');
   
   if(results.length === 0){
-    container.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center;">No books found. Try the manual form below.</div>';
+    container.innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center;">No books found</div>';
     return;
   }
   
-  container.innerHTML = results.map((result, index) => {
-    const tags = cleanTags(result.categories).slice(0, 4);
-    const tagsDisplay = tags.length ? tags.join(', ') : 'No tags detected';
-    
-    return `
-      <div class="result-item">
-        ${result.image ? `<img src="${result.image}" class="result-cover">` : '<div class="result-cover" style="background:var(--line);"></div>'}
-        <div class="result-info">
-          <div class="result-title">${escapeHtml(result.title)}</div>
-          <div class="result-meta">by ${escapeHtml(result.authors)}</div>
-          <div class="result-meta">
-            ${result.series ? `Series: ${escapeHtml(result.series.name)} #${result.series.number}` : 'Standalone'}
-            ${result.publishedDate ? ` • ${result.publishedDate}` : ''}
-          </div>
-          <div class="result-meta" style="font-size:11px;color:var(--muted);">
-            Tags: ${tagsDisplay}
-          </div>
-        </div>
-        <button class="action-btn primary" onclick="fillFromSearchResult(${index})" type="button">Use This</button>
+  container.innerHTML = results.map((result, index) => `
+    <div class="result-item">
+      ${result.image ? `<img src="${result.image}" class="result-cover">` : '<div class="result-cover" style="background:var(--line);"></div>'}
+      <div class="result-info">
+        <div class="result-title">${escapeHtml(result.title)}</div>
+        <div class="result-meta">by ${escapeHtml(result.authors)}</div>
       </div>
-    `;
-  }).join('');
+      <button class="action-btn primary" onclick="addBookFromResult(${index})" type="button">Add Book</button>
+    </div>
+  `).join('');
   
-  // Store results for fillFromSearchResult function
-  window.addSearchResults = results;
+  window.currentSearchResults = results;
 }
 
-function fillFromSearchResult(index){
-  const result = window.addSearchResults[index];
+function addBookFromResult(index){
+  const result = window.currentSearchResults[index];
   if(!result) return;
   
-  document.getElementById('manual-title').value = result.title;
-  document.getElementById('manual-author').value = result.authors;
-  document.getElementById('manual-genre').value = mapGenre(result.categories);
-  document.getElementById('manual-tags').value = cleanTags(result.categories).join(', ');
-  document.getElementById('manual-synopsis').value = result.description;
-  
-  if(result.series) {
-    document.getElementById('manual-series').value = result.series.name;
-    document.getElementById('manual-series-number').value = result.series.number || '';
-  }
-  
-  showToast('Book details filled in - review and add!');
-}
-
-function addManualBook(){
-  const title = document.getElementById('manual-title').value.trim();
-  const author = document.getElementById('manual-author').value.trim();
-  
-  if(!title || !author) {
-    showToast('Title and author are required', true);
-    return;
-  }
-  
-  const genre = document.getElementById('manual-genre').value;
-  const status = document.getElementById('manual-status').value;
-  const tagsText = document.getElementById('manual-tags').value.trim();
-  const tags = tagsText ? tagsText.split(',').map(t => t.trim().toLowerCase()).filter(Boolean) : [];
-  const seriesName = document.getElementById('manual-series').value.trim();
-  const seriesNumber = document.getElementById('manual-series-number').value.trim();
-  const synopsis = document.getElementById('manual-synopsis').value.trim();
-  
-  const series = seriesName ? {
-    name: seriesName,
-    number: seriesNumber
-  } : null;
-  
   const book = newBook({
-    title,
-    author,
-    genre,
-    status,
-    tags,
-    series,
-    synopsis,
+    title: result.title,
+    author: result.authors,
+    image: result.image,
+    synopsis: result.description,
+    genre: mapGenre(result.categories),
+    tags: cleanTags(result.categories),
+    status: 'wish',
     rating: 0
   });
   
@@ -1369,8 +1287,7 @@ function addManualBook(){
   populateFilters();
   applyFilters();
   updateStats();
-  closeAddBookModal();
-  showToast(`Added "${title}" to your library!`);
+  showToast(`Added "${result.title}" to your library!`);
 }
 let currentRatingBook = null;
 let currentRating = 0;
@@ -1892,56 +1809,13 @@ function initializeApp(){
   document.getElementById('sort-by').addEventListener('change', () => applyFilters());
   document.getElementById('collapse-synopsis').addEventListener('change', renderBooks);
 
-  // Action buttons - with fallback
-  const addBookBtn = document.getElementById('add-book-btn');
-  const checkReleasesBtn = document.getElementById('check-releases-btn');
-  
-  if(addBookBtn) {
-    addBookBtn.addEventListener('click', () => {
-      console.log('Add book button clicked');
-      openAddBookModal();
-    });
-  } else {
-    console.error('Add book button not found - looking for alternative');
-    // Try to add the event listener later when the element might exist
-    setTimeout(() => {
-      const btn = document.getElementById('add-book-btn');
-      if(btn) {
-        console.log('Found add book button on retry');
-        btn.addEventListener('click', () => openAddBookModal());
-      } else {
-        console.error('Add book button still not found after retry');
-      }
-    }, 1000);
-  }
-  
-  if(checkReleasesBtn) {
-    checkReleasesBtn.addEventListener('click', checkReleases);
-  }
+  // Action buttons - simplified
+  document.getElementById('add-book-btn').addEventListener('click', () => openSearchModal());
+  document.getElementById('check-releases-btn').addEventListener('click', checkReleases);
 
-  // Also try document-wide click handler as backup
-  document.addEventListener('click', (e) => {
-    if(e.target.id === 'add-book-btn' || e.target.closest('#add-book-btn')) {
-      console.log('Add book clicked via document handler');
-      e.preventDefault();
-      openAddBookModal();
-    }
-  });
-
-  // Add book modal event handlers
-  const addSearchBtn = document.getElementById('add-search-btn');
-  const manualAddBtn = document.getElementById('manual-add-btn');
-  const addBookClose = document.getElementById('add-book-close');
-  
-  if(addSearchBtn) {
-    addSearchBtn.addEventListener('click', performAddSearch);
-  }
-  if(manualAddBtn) {
-    manualAddBtn.addEventListener('click', addManualBook);
-  }
-  if(addBookClose) {
-    addBookClose.addEventListener('click', closeAddBookModal);
-  }
+  // Search modal
+  document.getElementById('ext-search-btn').addEventListener('click', performSearch);
+  document.getElementById('ext-close').addEventListener('click', closeSearchModal);
 
   // Rating modal
   document.getElementById('finish-save').addEventListener('click', saveRating);
@@ -1997,7 +1871,7 @@ function initializeApp(){
     // Close modals when clicking outside
     if(e.target.classList.contains('modal')){
       if(e.target.id === 'finish-modal') closeRatingModal();
-      if(e.target.id === 'add-book-modal') closeAddBookModal();
+      if(e.target.id === 'search-modal') closeSearchModal();
     }
   });
 
@@ -2006,7 +1880,7 @@ function initializeApp(){
     if(e.key === 'Escape'){
       document.querySelectorAll('.modal.show').forEach(modal => {
         if(modal.id === 'finish-modal') closeRatingModal();
-        if(modal.id === 'add-book-modal') closeAddBookModal();
+        if(modal.id === 'search-modal') closeSearchModal();
       });
       document.querySelectorAll('.dropdown.show').forEach(menu => {
         menu.classList.remove('show');
@@ -2034,10 +1908,8 @@ function openSection(sectionId){
 }
 
 // Global functions for inline event handlers
-window.toggleResult = toggleResult;
-window.addSingleResult = addSingleResult;
+window.addBookFromResult = addBookFromResult;
 window.removeWatchedSeries = removeWatchedSeries;
-window.fillFromSearchResult = fillFromSearchResult;
 
 // Initialize when DOM is loaded
 if(document.readyState === 'loading'){
